@@ -2,13 +2,16 @@ import './App.css';
 import './styles/Header.scss';
 import './styles/Body.scss';
 import { useState, useEffect } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import Requests from './components/Requests';
 import NotFound from './components/NotFound';
+import Login from './components/Login';
 
-function App() {
+function AppContent() {
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const { isAuthenticated, loading } = useAuth();
 
   useEffect(() => {
     // Check current URL on mount and when it changes
@@ -41,6 +44,28 @@ function App() {
     }
   };
 
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        fontSize: '1.2rem',
+        color: '#096B72'
+      }}>
+        Loading...
+      </div>
+    );
+  }
+
+  // Show login if not authenticated
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  // Show app content if authenticated
   return (
     <div>
       <Header setCurrentPage={handleNavigation} currentPage={currentPage} />
@@ -48,6 +73,14 @@ function App() {
       {currentPage === 'requests' && <Requests />}
       {currentPage === 'notfound' && <NotFound />}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 
