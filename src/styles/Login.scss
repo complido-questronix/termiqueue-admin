@@ -1,3 +1,4 @@
+@use "sass:color";
 @use '../App.scss' as *;
 
 .login-container {
@@ -5,7 +6,7 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, $primary-color 0%, darken($primary-color, 15%) 100%);
+  background: linear-gradient(135deg, $primary-color 0%, color.adjust($primary-color, $lightness: -15%) 100%);
   padding: 1rem;
 }
 
@@ -100,7 +101,7 @@
   margin-top: 0.5rem;
 
   &:hover:not(:disabled) {
-    background-color: darken($primary-color, 10%);
+    background-color: color.adjust($primary-color, $lightness: -10%);
     transform: translateY(-1px);
   }
 

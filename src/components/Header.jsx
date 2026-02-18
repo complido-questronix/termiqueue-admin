@@ -1,6 +1,6 @@
 import '../styles/Header.scss';
 import qnextLogo from '../assets/qnext.svg';
-import { MdDashboard, MdAssignment, MdLogout } from 'react-icons/md';
+import { MdDashboard, MdAssignment, MdLogout, MdDirectionsBus } from 'react-icons/md';
 import { useAuth } from '../context/AuthContext';
 
 function Header({ setCurrentPage, currentPage }) {
@@ -25,6 +25,11 @@ function Header({ setCurrentPage, currentPage }) {
           <li>
             <button className={currentPage === 'requests' ? 'active' : ''} onClick={() => setCurrentPage('requests')}>
               <MdAssignment /> Requests
+            </button>
+          </li>
+          <li>
+            <button className={currentPage === 'buses' ? 'active' : ''} onClick={() => setCurrentPage('buses')}>
+              <MdDirectionsBus /> Buses
             </button>
           </li>
         </ul>

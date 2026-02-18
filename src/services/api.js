@@ -153,4 +153,43 @@ export const deleteRequest = async (id) => {
   return response.data;
 };
 
+// Bus API endpoints
+export const fetchBuses = async (params = {}) => {
+  // params can include: page, limit, search, sortBy, sortOrder
+  const response = await api.get('/buses', { params });
+  return response.data;
+};
+
+export const fetchBusById = async (id) => {
+  const response = await api.get(`/buses/${id}`);
+  return response.data;
+};
+
+export const createBus = async (busData) => {
+  const response = await api.post('/buses', busData);
+  return response.data;
+};
+
+export const updateBus = async (id, busData) => {
+  const response = await api.put(`/buses/${id}`, busData);
+  return response.data;
+};
+
+export const deleteBus = async (id) => {
+  const response = await api.delete(`/buses/${id}`);
+  return response.data;
+};
+
+export const uploadBusPhoto = async (id, photoFile) => {
+  const formData = new FormData();
+  formData.append('photo', photoFile);
+  
+  const response = await api.post(`/buses/${id}/photo`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
 export default api;

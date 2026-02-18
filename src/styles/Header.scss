@@ -1,3 +1,4 @@
+@use "sass:color";
 @use '../App.scss' as *;
 
 .sidebar {
@@ -115,7 +116,7 @@
   width: 100%;
 
   &:hover {
-    background-color: darken($secondary-color, 10%);
+    background-color: color.adjust($secondary-color, $lightness: -10%);
     transform: translateY(-1px);
   }
 

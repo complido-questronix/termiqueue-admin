@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import Requests from './components/Requests';
+import Buses from './components/Buses';
 import NotFound from './components/NotFound';
 import Login from './components/Login';
 
@@ -20,6 +21,8 @@ function AppContent() {
       
       if (pathname === '/requests') {
         setCurrentPage('requests');
+      } else if (pathname === '/buses') {
+        setCurrentPage('buses');
       } else if (pathname === '/' || pathname === '') {
         setCurrentPage('dashboard');
       } else {
@@ -39,6 +42,8 @@ function AppContent() {
     // Update URL without page reload
     if (page === 'requests') {
       window.history.pushState({}, '', '/requests');
+    } else if (page === 'buses') {
+      window.history.pushState({}, '', '/buses');
     } else {
       window.history.pushState({}, '', '/');
     }
@@ -71,6 +76,7 @@ function AppContent() {
       <Header setCurrentPage={handleNavigation} currentPage={currentPage} />
       {currentPage === 'dashboard' && <Dashboard />}
       {currentPage === 'requests' && <Requests />}
+      {currentPage === 'buses' && <Buses />}
       {currentPage === 'notfound' && <NotFound />}
     </div>
   );
