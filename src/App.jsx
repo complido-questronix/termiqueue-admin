@@ -1,14 +1,16 @@
 import './App.css';
 import './styles/Header.scss';
 import './styles/Body.scss';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Header from './components/Header';
-import Dashboard from './components/Dashboard';
-import Requests from './components/Requests';
-import Buses from './components/Buses';
-import NotFound from './components/NotFound';
-import Login from './components/Login';
+import SkeletonLoader from './components/SkeletonLoader';
+
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const Requests = lazy(() => import('./components/Requests'));
+const Buses = lazy(() => import('./components/Buses'));
+const NotFound = lazy(() => import('./components/NotFound'));
+const Login = lazy(() => import('./components/Login'));
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -51,33 +53,28 @@ function AppContent() {
 
   // Show loading state while checking authentication
   if (loading) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        fontSize: '1.2rem',
-        color: '#096B72'
-      }}>
-        Loading...
-      </div>
-    );
+    return <SkeletonLoader fullPage />;
   }
 
   // Show login if not authenticated
   if (!isAuthenticated) {
-    return <Login />;
+    return (
+      <Suspense fallback={<SkeletonLoader fullPage />}>
+        <Login />
+      </Suspense>
+    );
   }
 
   // Show app content if authenticated
   return (
     <div>
       <Header setCurrentPage={handleNavigation} currentPage={currentPage} />
-      {currentPage === 'dashboard' && <Dashboard />}
-      {currentPage === 'requests' && <Requests />}
-      {currentPage === 'buses' && <Buses />}
-      {currentPage === 'notfound' && <NotFound />}
+      <Suspense fallback={<SkeletonLoader />}>
+        {currentPage === 'dashboard' && <Dashboard />}
+        {currentPage === 'requests' && <Requests />}
+        {currentPage === 'buses' && <Buses />}
+        {currentPage === 'notfound' && <NotFound />}
+      </Suspense>
     </div>
   );
 }

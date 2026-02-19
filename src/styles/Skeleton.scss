@@ -1,0 +1,153 @@
+@use '../App.scss' as *;
+
+.skeleton-container {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.skeleton-full-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 100vh;
+  padding: 2rem;
+  background-color: #f5f5f5;
+}
+
+.skeleton-header {
+  margin-bottom: 1.5rem;
+}
+
+.skeleton-title {
+  height: 2rem;
+  width: clamp(180px, 24%, 320px);
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+}
+
+.skeleton-subtitle {
+  height: 1rem;
+  width: clamp(240px, 42%, 520px);
+  border-radius: 6px;
+}
+
+.skeleton-toolbar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.skeleton-input {
+  height: 2.5rem;
+  width: clamp(280px, 45%, 520px);
+  border-radius: 6px;
+}
+
+.skeleton-button {
+  height: 2.5rem;
+  width: clamp(110px, 12%, 170px);
+  border-radius: 6px;
+}
+
+.skeleton-table {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.skeleton-table-head,
+.skeleton-row {
+  display: grid;
+  grid-template-columns: 1.1fr 1.9fr 1.6fr 1fr 1.2fr 0.8fr;
+  gap: 0.75rem;
+  padding: 0.875rem;
+}
+
+.skeleton-table-head {
+  background: $primary-color;
+
+  .shimmer {
+    height: 0.95rem;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.35);
+    animation: none;
+  }
+}
+
+.skeleton-row {
+  border-bottom: 1px solid #eaeaea;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .shimmer {
+    height: 0.9rem;
+    border-radius: 4px;
+  }
+
+  .shimmer:nth-child(1) { width: 70%; }
+  .shimmer:nth-child(2) { width: 95%; }
+  .shimmer:nth-child(3) { width: 85%; }
+  .shimmer:nth-child(4) { width: 60%; }
+  .shimmer:nth-child(5) { width: 75%; }
+  .shimmer:nth-child(6) { width: 45%; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #f0f2f4 25%, #e4e8ec 37%, #f0f2f4 63%);
+  background-size: 400% 100%;
+  animation: skeletonShimmer 1.4s ease infinite;
+}
+
+.table-skeleton-row {
+  td {
+    padding: 1rem;
+  }
+}
+
+.table-skeleton-cell {
+  height: 0.95rem;
+  width: 90%;
+  border-radius: 4px;
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .skeleton-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .skeleton-input,
+  .skeleton-button {
+    width: 100%;
+  }
+
+  .skeleton-table-head,
+  .skeleton-row {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+
+  .skeleton-title,
+  .skeleton-subtitle,
+  .skeleton-input,
+  .skeleton-button {
+    width: 100%;
+  }
+}
