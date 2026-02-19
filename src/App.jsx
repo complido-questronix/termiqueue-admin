@@ -9,6 +9,7 @@ import SkeletonLoader from './components/SkeletonLoader';
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const Requests = lazy(() => import('./components/Requests'));
 const Buses = lazy(() => import('./components/Buses'));
+const LearningGuidePage = lazy(() => import('./components/LearningGuidePage'));
 const NotFound = lazy(() => import('./components/NotFound'));
 const Login = lazy(() => import('./components/Login'));
 
@@ -25,6 +26,8 @@ function AppContent() {
         setCurrentPage('requests');
       } else if (pathname === '/buses') {
         setCurrentPage('buses');
+      } else if (pathname === '/learning-guide') {
+        setCurrentPage('learning-guide');
       } else if (pathname === '/' || pathname === '') {
         setCurrentPage('dashboard');
       } else {
@@ -46,6 +49,8 @@ function AppContent() {
       window.history.pushState({}, '', '/requests');
     } else if (page === 'buses') {
       window.history.pushState({}, '', '/buses');
+    } else if (page === 'learning-guide') {
+      window.history.pushState({}, '', '/learning-guide');
     } else {
       window.history.pushState({}, '', '/');
     }
@@ -73,6 +78,7 @@ function AppContent() {
         {currentPage === 'dashboard' && <Dashboard />}
         {currentPage === 'requests' && <Requests />}
         {currentPage === 'buses' && <Buses />}
+        {currentPage === 'learning-guide' && <LearningGuidePage />}
         {currentPage === 'notfound' && <NotFound />}
       </Suspense>
     </div>
