@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import '../styles/Body.scss';
 import '../styles/Requests.scss';
+import TableSkeletonRows from './TableSkeletonRows';
 // Uncomment when integrating with API:
 // import { fetchBuses, createBus, updateBus, deleteBus } from '../services/api';
 
@@ -26,7 +27,7 @@ const initialBuses = [
 ];
 
 function Buses() {
-  const [buses, setBuses] = useState(initialBuses); // Use empty array [] when API is ready
+  const [buses, setBuses] = useState([]); // Use empty array [] when API is ready
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [selectedBus, setSelectedBus] = useState(null);
@@ -35,7 +36,7 @@ function Buses() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('lastUpdated');
   const [sortOrder, setSortOrder] = useState('desc');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [newBus, setNewBus] = useState({
     busNumber: '',
@@ -50,6 +51,15 @@ function Buses() {
     registeredDestination: '',
     busPhoto: null
   });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setBuses(initialBuses);
+      setLoading(false);
+    }, 700);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // API Integration - Uncomment when backend is ready
   /*
@@ -142,7 +152,7 @@ function Buses() {
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = sortedBuses.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(sortedBuses.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(sortedBuses.length / itemsPerPage));
 
   // Change page
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
@@ -334,27 +344,31 @@ function Buses() {
 
         <div className="table-container">
           <table className="requests-table">
+            <colgroup>
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '24%' }} />
+              <col style={{ width: '22%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '8%' }} />
+            </colgroup>
             <thead>
               <tr>
                 <th>Bus Number</th>
                 <th>Route</th>
                 <th>Bus Company</th>
-                <th>Status</th>
+                <th className="center-col">Status</th>
                 <th>Plate Number</th>
-                <th>Capacity</th>
+                <th className="center-col">Capacity</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>
-                    Loading buses...
-                  </td>
-                </tr>
+                <TableSkeletonRows rows={6} columns={6} />
               ) : currentItems.length === 0 ? (
                 <tr>
                   <td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>
-                    {searchQuery ? 'No buses found matching your search.' : 'No buses available.'}
+                    {searchQuery ? 'No buses found matching your search.' : 'No data on the table yet.'}
                   </td>
                 </tr>
               ) : (
@@ -363,13 +377,13 @@ function Buses() {
                     <td className="bus-number">{bus.busNumber}</td>
                     <td>{bus.route}</td>
                     <td>{bus.busCompany}</td>
-                    <td>
+                    <td className="center-col">
                       <span className={`status-badge ${getStatusClass(bus.status)}`}>
                         {bus.status}
                       </span>
                     </td>
                     <td>{bus.plateNumber}</td>
-                    <td>{bus.capacity}</td>
+                    <td className="center-col">{bus.capacity}</td>
                   </tr>
                 ))
               )}
@@ -377,40 +391,44 @@ function Buses() {
           </table>
         </div>
 
-        <div className="pagination">
-          <button
-            onClick={() => paginate(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="pagination-btn"
-          >
-            Previous
-          </button>
+        {sortedBuses.length > 0 && (
+          <div className="pagination">
+            <button
+              onClick={() => paginate(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="pagination-btn"
+            >
+              Previous
+            </button>
 
-          <div className="page-numbers">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
-              <button
-                key={number}
-                onClick={() => paginate(number)}
-                className={`page-number ${currentPage === number ? 'active' : ''}`}
-              >
-                {number}
-              </button>
-            ))}
+            <div className="page-numbers">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
+                <button
+                  key={number}
+                  onClick={() => paginate(number)}
+                  className={`page-number ${currentPage === number ? 'active' : ''}`}
+                >
+                  {number}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => paginate(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="pagination-btn"
+            >
+              Next
+            </button>
           </div>
+        )}
 
-          <button
-            onClick={() => paginate(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="pagination-btn"
-          >
-            Next
-          </button>
-        </div>
-
-        <div className="table-info">
-          Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, sortedBuses.length)} of {sortedBuses.length} buses
-          {searchQuery && ` (filtered from ${buses.length} total)`}
-        </div>
+        {sortedBuses.length > 0 && (
+          <div className="table-info">
+            Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, sortedBuses.length)} of {sortedBuses.length} buses
+            {searchQuery && ` (filtered from ${buses.length} total)`}
+          </div>
+        )}
       </div>
 
       {/* Add Bus Modal */}

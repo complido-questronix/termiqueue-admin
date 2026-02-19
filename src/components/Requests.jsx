@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import '../styles/Body.scss';
 import '../styles/Requests.scss';
+import TableSkeletonRows from './TableSkeletonRows';
 // import { fetchRequests } from '../services/api'; // Uncomment when API is ready
 
 // Sample data - replace with actual API data
@@ -45,14 +46,25 @@ const sampleRequests = [
 ];
 
 function Requests() {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setRequests(sampleRequests);
+      setLoading(false);
+    }, 700);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Calculate pagination
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = sampleRequests.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(sampleRequests.length / itemsPerPage);
+  const currentItems = requests.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.max(1, Math.ceil(requests.length / itemsPerPage));
 
   // Change page
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
@@ -67,17 +79,6 @@ function Requests() {
     }
   };
 
-  // Get priority color class
-  const getPriorityClass = (priority) => {
-    switch (priority) {
-      case 'Critical': return 'priority-critical';
-      case 'High': return 'priority-high';
-      case 'Medium': return 'priority-medium';
-      case 'Low': return 'priority-low';
-      default: return '';
-    }
-  };
-
   return (
     <main className="content">
       <div className="requests-container">
@@ -88,74 +89,90 @@ function Requests() {
 
         <div className="table-container">
           <table className="requests-table">
+            <colgroup>
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '24%' }} />
+              <col style={{ width: '22%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '8%' }} />
+            </colgroup>
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Title</th>
-                <th>Status</th>
-                <th>Priority</th>
-                <th>Assignee</th>
-                <th>Department</th>
-                <th>Date</th>
+                <th>Bus Number</th>
+                <th>Route</th>
+                <th>Bus Company</th>
+                <th className="center-col">Status</th>
+                <th>Plate Number</th>
+                <th className="center-col">Capacity</th>
               </tr>
             </thead>
             <tbody>
-              {currentItems.map((request) => (
-                <tr key={request.id}>
-                  <td>#{request.id}</td>
-                  <td className="title-cell">{request.title}</td>
-                  <td>
-                    <span className={`status-badge ${getStatusClass(request.status)}`}>
-                      {request.status}
-                    </span>
+              {loading ? (
+                <TableSkeletonRows rows={6} columns={6} />
+              ) : currentItems.length === 0 ? (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>
+                    No data on the table yet.
                   </td>
-                  <td>
-                    <span className={`priority-badge ${getPriorityClass(request.priority)}`}>
-                      {request.priority}
-                    </span>
-                  </td>
-                  <td>{request.assignee}</td>
-                  <td>{request.department}</td>
-                  <td>{request.date}</td>
                 </tr>
-              ))}
+              ) : (
+                currentItems.map((request) => (
+                  <tr key={request.id}>
+                    <td className="bus-number">RQ-{request.id}</td>
+                    <td className="title-cell">{request.title}</td>
+                    <td>{request.department}</td>
+                    <td className="center-col">
+                      <span className={`status-badge ${getStatusClass(request.status)}`}>
+                        {request.status}
+                      </span>
+                    </td>
+                    <td>{request.assignee}</td>
+                    <td className="center-col">{request.priority}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
-        <div className="pagination">
-          <button
-            onClick={() => paginate(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="pagination-btn"
-          >
-            Previous
-          </button>
+        {requests.length > 0 && (
+          <div className="pagination">
+            <button
+              onClick={() => paginate(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="pagination-btn"
+            >
+              Previous
+            </button>
 
-          <div className="page-numbers">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
-              <button
-                key={number}
-                onClick={() => paginate(number)}
-                className={`page-number ${currentPage === number ? 'active' : ''}`}
-              >
-                {number}
-              </button>
-            ))}
+            <div className="page-numbers">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
+                <button
+                  key={number}
+                  onClick={() => paginate(number)}
+                  className={`page-number ${currentPage === number ? 'active' : ''}`}
+                >
+                  {number}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => paginate(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="pagination-btn"
+            >
+              Next
+            </button>
           </div>
+        )}
 
-          <button
-            onClick={() => paginate(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="pagination-btn"
-          >
-            Next
-          </button>
-        </div>
-
-        <div className="table-info">
-          Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, sampleRequests.length)} of {sampleRequests.length} requests
-        </div>
+        {requests.length > 0 && (
+          <div className="table-info">
+            Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, requests.length)} of {requests.length} requests
+          </div>
+        )}
       </div>
     </main>
   );
