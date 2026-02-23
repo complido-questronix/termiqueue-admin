@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import '../styles/Body.scss';
 import '../styles/Requests.scss';
 import TableSkeletonRows from './TableSkeletonRows';
+<<<<<<< HEAD
 import {
   getArchivedBusesData,
   getBusesData,
@@ -24,23 +25,36 @@ function Buses() {
   const [viewMode, setViewMode] = useState('active');
   const [sortBy, setSortBy] = useState('lastUpdated');
   const [sortOrder, setSortOrder] = useState('desc');
+=======
+import { fetchBuses, createBus } from '../services/api';
+
+function Buses() {
+  const [buses, setBuses] = useState([]); 
+>>>>>>> dev-api
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [selectedBus, setSelectedBus] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
   const [newBus, setNewBus] = useState({
-    busNumber: '',
-    route: '',
-    busCompany: '',
-    status: 'Active',
-    plateNumber: '',
+    bus_number: '',       // Required by backend
+    plate_number: '',
     capacity: '',
-    busAttendant: '',
-    busCompanyEmail: '',
-    busCompanyContact: '',
-    registeredDestination: '',
-    busPhoto: null
+    priority_seat: '',    // Required by backend
+    status: 'Active',
+    route_name: '',
+    origin: '',           // Required by backend
+    registered_destination: '',
+    operator: '',
+    company_email: '',
+    company_contact: '',
+    bus_attendant: '',
+    driver_name: '' 
   });
 
   useEffect(() => {
+<<<<<<< HEAD
     const timer = setTimeout(() => {
       setBuses(getBusesData());
       setArchivedBuses(getArchivedBusesData());
@@ -65,32 +79,26 @@ function Buses() {
   // API Integration - Uncomment when backend is ready
   /*
   useEffect(() => {
+=======
+>>>>>>> dev-api
     loadBuses();
-  }, [currentPage, searchQuery, sortBy, sortOrder]);
+  }, []);
 
   const loadBuses = async () => {
     try {
       setLoading(true);
-      setError(null);
-      const data = await fetchBuses({
-        page: currentPage,
-        limit: itemsPerPage,
-        search: searchQuery,
-        sortBy: sortBy,
-        sortOrder: sortOrder
-      });
-      setBuses(data.buses); // Adjust based on your API response structure
-      // If your API returns totalCount, you can calculate totalPages:
-      // setTotalPages(Math.ceil(data.totalCount / itemsPerPage));
+      const data = await fetchBuses();
+      // Handle different API response structures
+      setBuses(Array.isArray(data) ? data : (data.buses || []));
     } catch (err) {
-      setError(err.message || 'Failed to load buses');
-      console.error('Error loading buses:', err);
+      console.error("Fetch failed:", err);
+      setBuses([]); 
     } finally {
       setLoading(false);
     }
   };
-  */
 
+<<<<<<< HEAD
   // Filter buses based on search query
   const sourceBuses = viewMode === 'active' ? buses : archivedBuses;
 
@@ -357,14 +365,14 @@ function Buses() {
   };
 
   // Handle input change in add bus form
+=======
+>>>>>>> dev-api
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewBus(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setNewBus(prev => ({ ...prev, [name]: value }));
   };
 
+<<<<<<< HEAD
   const handleBusPhotoUpload = (e) => {
     const file = e.target.files && e.target.files[0];
 
@@ -433,11 +441,20 @@ function Buses() {
     // Local state update (current implementation)
     // Remove this block when API is integrated
     const newBusEntry = {
+=======
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Explicit conversion to Integers to avoid 422 errors
+    const submissionData = {
+>>>>>>> dev-api
       ...newBus,
-      id: buses.length > 0 ? Math.max(...buses.map(b => b.id)) + 1 : 1,
-      capacity: parseInt(newBus.capacity),
-      lastUpdated: Date.now()
+      capacity: parseInt(newBus.capacity, 10) || 0,
+      priority_seat: parseInt(newBus.priority_seat, 10) || 0,
+      company_email: newBus.company_email || null,
+      company_contact: newBus.company_contact || null
     };
+<<<<<<< HEAD
     setBuses(prev => [...prev, newBusEntry]);
     closeAddModal();
 
@@ -457,6 +474,46 @@ function Buses() {
   };
 
   const isArchivedView = viewMode === 'archived';
+=======
+
+    try {
+      await createBus(submissionData);
+      setShowAddModal(false);
+      await loadBuses(); // Refresh data immediately
+      
+      // Reset form
+      setNewBus({
+        bus_number: '', plate_number: '', capacity: '', priority_seat: '', 
+        status: 'Active', route_name: '', origin: '', registered_destination: '', 
+        operator: '', company_email: '', company_contact: '', 
+        bus_attendant: '', driver_name: '' 
+      });
+    } catch (err) {
+      console.error("Backend Error Detail:", err.response?.data);
+      alert(`Failed to save: ${JSON.stringify(err.response?.data?.detail || "Check console")}`);
+    }
+  };
+
+  const handleRowClick = (bus) => {
+    setSelectedBus(bus);
+    setShowViewModal(true);
+  };
+
+  // Matched status colors to your screenshot
+  const getStatusClass = (status) => {
+    const s = (status || '').toLowerCase();
+    if (s === 'active' || s === 'available') return 'status-completed'; // Green
+    if (s === 'maintenance') return 'status-pending'; // Orange
+    return 'status-in-progress';
+  };
+
+  const filteredBuses = (buses || []).filter(bus => 
+    (bus.bus_number || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (bus.plate_number || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (bus.route_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (bus.operator || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
+>>>>>>> dev-api
 
   return (
     <main className="content">
@@ -467,11 +524,16 @@ function Buses() {
               <h1>Buses</h1>
               <p className="subtitle">Manage active buses, archive removals, and permanently delete archived entries</p>
             </div>
+<<<<<<< HEAD
+=======
+            <button className="add-bus-btn" onClick={() => setShowAddModal(true)}>+ Add New Bus</button>
+>>>>>>> dev-api
           </div>
         </div>
 
-        {/* Search and Sort Controls */}
+        {/* Search and Sort matched to UI */}
         <div className="search-sort-controls">
+<<<<<<< HEAD
           <div className="search-sort-group">
 
             <div className="search-bar">
@@ -582,8 +644,31 @@ function Buses() {
               <col style={{ width: '8%' }} />
               <col style={{ width: '14%' }} />
             </colgroup>
+=======
+          <div className="search-bar">
+            <input
+              type="text"
+              placeholder="Search by bus number, route, company, plate..."
+              className="search-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="sort-controls">
+            <select className="sort-select">
+              <option>Last Updated</option>
+            </select>
+            <button className="sort-direction-btn">↓</button>
+          </div>
+        </div>
+
+        <div className="table-container">
+          <table className="requests-table">
+>>>>>>> dev-api
             <thead>
+              {/* Header column order matched to target screenshot */}
               <tr>
+<<<<<<< HEAD
                 <th className="center-col">
                   <input
                     type="checkbox"
@@ -629,12 +714,29 @@ function Buses() {
                     <td className="bus-number">{bus.busNumber}</td>
                     <td>{bus.route}</td>
                     <td>{bus.busCompany}</td>
+=======
+                <th>BUS NUMBER</th>
+                <th>ROUTE</th>
+                <th>BUS COMPANY</th>
+                <th className="center-col">STATUS</th>
+                <th>PLATE NUMBER</th>
+                <th className="center-col">CAPACITY</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? <TableSkeletonRows rows={10} columns={6} /> : 
+                filteredBuses.map((bus, index) => (
+                  <tr key={bus.id || index} className="clickable-row" onClick={() => handleRowClick(bus)}>
+                    <td className="bus-number-cell">{bus.bus_number}</td>
+                    <td>{bus.route_name || 'No Route'}</td>
+                    <td>{bus.operator || 'Independent'}</td>
+>>>>>>> dev-api
                     <td className="center-col">
                       <span className={`status-badge ${getStatusClass(bus.status)}`}>
                         {bus.status}
                       </span>
                     </td>
-                    <td>{bus.plateNumber}</td>
+                    <td>{bus.plate_number}</td>
                     <td className="center-col">{bus.capacity}</td>
                     <td className="center-col action-cell">
                       {isArchivedView ? (
@@ -675,41 +777,21 @@ function Buses() {
                     </td>
                   </tr>
                 ))
-              )}
+              }
             </tbody>
           </table>
-        </div>
 
-        {sortedBuses.length > 0 && (
-          <div className="pagination">
-            <button
-              onClick={() => paginate(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="pagination-btn"
-            >
-              Previous
-            </button>
-
-            <div className="page-numbers">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
-                <button
-                  key={number}
-                  onClick={() => paginate(number)}
-                  className={`page-number ${currentPage === number ? 'active' : ''}`}
-                >
-                  {number}
-                </button>
-              ))}
+          {/* Pagination Footer matched to UI */}
+          <div className="table-footer">
+            <p>Showing 1 to {filteredBuses.length} of {buses.length} buses</p>
+            <div className="pagination">
+              <button className="page-btn">Previous</button>
+              <button className="page-btn active">1</button>
+              <button className="page-btn">2</button>
+              <button className="page-btn">Next</button>
             </div>
-
-            <button
-              onClick={() => paginate(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="pagination-btn"
-            >
-              Next
-            </button>
           </div>
+<<<<<<< HEAD
         )}
 
         {sortedBuses.length > 0 && (
@@ -718,76 +800,55 @@ function Buses() {
             {searchQuery && ` (filtered from ${sourceBuses.length} total)`}
           </div>
         )}
+=======
+        </div>
+>>>>>>> dev-api
       </div>
 
-      {/* Add Bus Modal */}
       {showAddModal && (
-        <div className="modal-overlay" onClick={closeAddModal}>
-          <div className="modal-content add-bus-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay">
+          <div className="modal-content add-bus-modal">
             <div className="modal-header">
               <h2>Add New Bus</h2>
-              <button className="close-btn" onClick={closeAddModal}>&times;</button>
+              <button className="close-btn" onClick={() => setShowAddModal(false)}>&times;</button>
             </div>
+<<<<<<< HEAD
 
             <form onSubmit={handleSubmit} className="modal-body">
               <div className="form-grid">
                 <div className="form-section">
                   <h3>Bus Information</h3>
 
+=======
+            <div className="modal-body scrollable-modal">
+              <form onSubmit={handleSubmit}>
+                <section className="form-section">
+                  <h3 className="section-title">Bus Information</h3>
+>>>>>>> dev-api
                   <div className="form-group">
-                    <label htmlFor="busNumber">Bus Number *</label>
-                    <input
-                      type="text"
-                      id="busNumber"
-                      name="busNumber"
-                      value={newBus.busNumber}
-                      onChange={handleInputChange}
-                      placeholder="e.g., OA-116"
-                      required
-                    />
+                    <label>Bus Number *</label>
+                    <input name="bus_number" value={newBus.bus_number} onChange={handleInputChange} required placeholder="e.g., OA-116" />
                   </div>
-
                   <div className="form-group">
-                    <label htmlFor="plateNumber">Plate Number *</label>
-                    <input
-                      type="text"
-                      id="plateNumber"
-                      name="plateNumber"
-                      value={newBus.plateNumber}
-                      onChange={handleInputChange}
-                      placeholder="e.g., ABC-123"
-                      required
-                    />
+                    <label>Plate Number *</label>
+                    <input name="plate_number" value={newBus.plate_number} onChange={handleInputChange} required placeholder="e.g., ABC-123" />
                   </div>
-
                   <div className="form-group">
-                    <label htmlFor="capacity">Capacity *</label>
-                    <input
-                      type="number"
-                      id="capacity"
-                      name="capacity"
-                      value={newBus.capacity}
-                      onChange={handleInputChange}
-                      placeholder="e.g., 45"
-                      min="1"
-                      required
-                    />
+                    <label>Capacity *</label>
+                    <input type="number" name="capacity" value={newBus.capacity} onChange={handleInputChange} required placeholder="45" />
                   </div>
-
                   <div className="form-group">
-                    <label htmlFor="status">Status *</label>
-                    <select
-                      id="status"
-                      name="status"
-                      value={newBus.status}
-                      onChange={handleInputChange}
-                      required
-                    >
+                    <label>Priority Seats *</label>
+                    <input type="number" name="priority_seat" value={newBus.priority_seat} onChange={handleInputChange} required placeholder="10" />
+                  </div>
+                  <div className="form-group">
+                    <label>Status *</label>
+                    <select name="status" value={newBus.status} onChange={handleInputChange}>
                       <option value="Active">Active</option>
                       <option value="Maintenance">Maintenance</option>
-                      <option value="Inactive">Inactive</option>
                     </select>
                   </div>
+<<<<<<< HEAD
 
                   <div className="form-group">
                     <label htmlFor="busPhoto">Upload Bus Photo</label>
@@ -816,75 +877,55 @@ function Buses() {
                 <div className="form-section">
                   <h3>Route Information</h3>
 
-                  <div className="form-group">
-                    <label htmlFor="route">Route *</label>
-                    <input
-                      type="text"
-                      id="route"
-                      name="route"
-                      value={newBus.route}
-                      onChange={handleInputChange}
-                      placeholder="e.g., One Ayala - BGC"
-                      required
-                    />
-                  </div>
+=======
+                </section>
 
+                <section className="form-section">
+                  <h3 className="section-title">Route Information</h3>
+>>>>>>> dev-api
                   <div className="form-group">
-                    <label htmlFor="registeredDestination">Registered Destination *</label>
-                    <input
-                      type="text"
-                      id="registeredDestination"
-                      name="registeredDestination"
-                      value={newBus.registeredDestination}
-                      onChange={handleInputChange}
-                      placeholder="e.g., Bonifacio Global City, Taguig"
-                      required
-                    />
+                    <label>Origin *</label>
+                    <input name="origin" value={newBus.origin} onChange={handleInputChange} required placeholder="e.g., Makati" />
                   </div>
+                  <div className="form-group">
+                    <label>Route *</label>
+                    <input name="route_name" value={newBus.route_name} onChange={handleInputChange} required placeholder="e.g., One Ayala - BGC" />
+                  </div>
+<<<<<<< HEAD
                 </div>
 
                 <div className="form-section">
                   <h3>Bus Company</h3>
 
+=======
+>>>>>>> dev-api
                   <div className="form-group">
-                    <label htmlFor="busCompany">Company Name *</label>
-                    <input
-                      type="text"
-                      id="busCompany"
-                      name="busCompany"
-                      value={newBus.busCompany}
-                      onChange={handleInputChange}
-                      placeholder="e.g., JAM Transit"
-                      required
-                    />
+                    <label>Registered Destination *</label>
+                    <input name="registered_destination" value={newBus.registered_destination} onChange={handleInputChange} required placeholder="e.g., Pasig City" />
                   </div>
+                </section>
 
+                <section className="form-section">
+                  <h3 className="section-title">Bus Company</h3>
                   <div className="form-group">
-                    <label htmlFor="busCompanyEmail">Company Email *</label>
-                    <input
-                      type="email"
-                      id="busCompanyEmail"
-                      name="busCompanyEmail"
-                      value={newBus.busCompanyEmail}
-                      onChange={handleInputChange}
-                      placeholder="e.g., operations@company.com.ph"
-                      required
-                    />
+                    <label>Company Name *</label>
+                    <input name="operator" value={newBus.operator} onChange={handleInputChange} required placeholder="e.g., JAM Transit" />
                   </div>
+                </section>
 
+                <section className="form-section attendant-section">
+                  <h3 className="section-title">Bus Attendant (Source of Truth)</h3>
                   <div className="form-group">
-                    <label htmlFor="busCompanyContact">Company Contact *</label>
-                    <input
-                      type="tel"
-                      id="busCompanyContact"
-                      name="busCompanyContact"
-                      value={newBus.busCompanyContact}
-                      onChange={handleInputChange}
-                      placeholder="e.g., +63 917 123 4567"
-                      required
-                    />
+                    <label>Assigned Bus Attendant *</label>
+                    <input name="bus_attendant" value={newBus.bus_attendant} onChange={handleInputChange} required placeholder="e.g., Juan Dela Cruz" />
                   </div>
+                </section>
+
+                <div className="form-actions">
+                  <button type="button" className="btn-cancel" onClick={() => setShowAddModal(false)}>Cancel</button>
+                  <button type="submit" className="btn-submit">Save Bus</button>
                 </div>
+<<<<<<< HEAD
 
                 <div className="form-section highlight-section">
                   <h3>Bus Attendant (Source of Truth)</h3>
@@ -1039,6 +1080,9 @@ function Buses() {
                   </button>
                 )}
               </div>
+=======
+              </form>
+>>>>>>> dev-api
             </div>
           </div>
         </div>

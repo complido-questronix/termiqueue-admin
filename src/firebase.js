@@ -11,9 +11,26 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Verify required env vars are present
+const hasConfig = !!(
+  firebaseConfig.apiKey &&
+  firebaseConfig.authDomain &&
+  firebaseConfig.projectId &&
+  firebaseConfig.appId
+);
 
-// Export for use in other files
-export const db = getFirestore(app);
-export const auth = getAuth(app);
+let app = null;
+let db = null;
+let auth = null;
+
+if (hasConfig) {
+  app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  auth = getAuth(app);
+} else {
+  // Warn in development so the developer knows why Firebase calls fail
+  console.warn('Firebase not initialized: missing VITE_FIREBASE_* environment variables. Running in demo mode.');
+}
+
+export const firebaseInitialized = hasConfig;
+export { db, auth, app };

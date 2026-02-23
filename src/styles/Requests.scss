@@ -1056,3 +1056,119 @@
     }
   }
 }
+/* Modal Layout */
+.large-modal {
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.modal-header {
+  background: #00767c; // Teal background from your image
+  color: white;
+  padding: 15px 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  h2 { margin: 0; font-size: 1.5rem; }
+  .close-x { 
+    background: none; border: none; color: white; 
+    font-size: 2rem; cursor: pointer; 
+  }
+}
+
+/* Form Sections */
+.form-section {
+  padding: 20px 25px;
+  border-bottom: 8px solid #f4f7f9; // Thick divider
+
+  .section-title {
+    color: #00767c;
+    font-size: 1.1rem;
+    text-align: center;
+    margin-bottom: 20px;
+    position: relative;
+    padding-bottom: 10px;
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 50px;
+      height: 2px;
+      background: #00767c; // The blue underline
+    }
+  }
+}
+
+/* Inputs */
+.input-group {
+  margin-bottom: 15px;
+  
+  label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  input, select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: #fdfdfd;
+    text-align: center; // Center text like your placeholder
+
+    &:focus {
+      outline: none;
+      border-color: #00767c;
+    }
+  }
+}
+
+.helper-text {
+  font-style: italic;
+  font-size: 0.8rem;
+  color: #666;
+  text-align: center;
+  background: #e0f2f1;
+  padding: 10px;
+  border-radius: 4px;
+}
+
+/* Actions */
+.modal-footer {
+  padding: 20px 25px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+
+  .cancel-btn {
+    padding: 10px 25px;
+    border: 1px solid #ddd;
+    background: #eee;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .add-btn {
+    padding: 10px 25px;
+    background: #00767c;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+
+    &:hover { background: #005a5f; }
+  }
+}
