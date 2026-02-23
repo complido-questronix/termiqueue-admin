@@ -2,6 +2,7 @@ import { auth, db } from "../firebase"; // This points back to your firebase.js 
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 
+
 export const loginAsAdmin = async (email, password) => {
   try {
     // This logs the user into Firebase Authentication
@@ -25,4 +26,8 @@ export const loginAsAdmin = async (email, password) => {
     alert("Error: " + error.message);
     return false;
   }
+};
+// Add this to the bottom of src/services/authService.js
+export const getCurrentUser = () => {
+  return auth.currentUser;
 };

@@ -2,279 +2,104 @@ import { useState, useEffect } from 'react';
 import '../styles/Body.scss';
 import '../styles/Requests.scss';
 import TableSkeletonRows from './TableSkeletonRows';
-// Uncomment when integrating with API:
-// import { fetchBuses, createBus, updateBus, deleteBus } from '../services/api';
-
-// Initial bus data - One Ayala, Philippines
-// Note: Bus attendant is the source of truth for bus information
-// TODO: Remove this when API is integrated
-const initialBuses = [
-  { id: 1, busNumber: 'OA-101', route: 'One Ayala - BGC', busCompany: 'JAM Transit', status: 'Active', plateNumber: 'UVW-823', capacity: 45, busAttendant: 'Juan Dela Cruz', busCompanyEmail: 'operations@jamtransit.com.ph', busCompanyContact: '+63 917 123 4567', registeredDestination: 'Bonifacio Global City, Taguig', busPhoto: null, lastUpdated: new Date('2026-02-18T10:30:00').getTime() },
-  { id: 2, busNumber: 'OA-102', route: 'One Ayala - Ortigas', busCompany: 'RRCG Transport', status: 'Active', plateNumber: 'XYZ-456', capacity: 50, busAttendant: 'Maria Santos', busCompanyEmail: 'info@rrcgtransport.ph', busCompanyContact: '+63 918 234 5678', registeredDestination: 'Ortigas Center, Pasig City', busPhoto: null, lastUpdated: new Date('2026-02-18T09:15:00').getTime() },
-  { id: 3, busNumber: 'OA-103', route: 'One Ayala - Quezon City', busCompany: 'Froehlich Tours', status: 'Maintenance', plateNumber: 'ABC-789', capacity: 48, busAttendant: 'Pedro Ramirez', busCompanyEmail: 'contact@froehlich.com.ph', busCompanyContact: '+63 919 345 6789', registeredDestination: 'Quezon City Circle, QC', busPhoto: null, lastUpdated: new Date('2026-02-17T14:20:00').getTime() },
-  { id: 4, busNumber: 'OA-104', route: 'One Ayala - Mandaluyong', busCompany: 'HM Transport', status: 'Active', plateNumber: 'DEF-234', capacity: 42, busAttendant: 'Rosa Garcia', busCompanyEmail: 'support@hmtransport.ph', busCompanyContact: '+63 920 456 7890', registeredDestination: 'Mandaluyong City Center', busPhoto: null, lastUpdated: new Date('2026-02-18T08:45:00').getTime() },
-  { id: 5, busNumber: 'OA-105', route: 'One Ayala - BGC', busCompany: 'JAM Transit', status: 'Active', plateNumber: 'GHI-567', capacity: 45, busAttendant: 'Carlos Reyes', busCompanyEmail: 'operations@jamtransit.com.ph', busCompanyContact: '+63 917 123 4567', registeredDestination: 'Bonifacio Global City, Taguig', busPhoto: null, lastUpdated: new Date('2026-02-16T16:30:00').getTime() },
-  { id: 6, busNumber: 'OA-106', route: 'One Ayala - Alabang', busCompany: 'Partas Transport', status: 'Inactive', plateNumber: 'JKL-890', capacity: 52, busAttendant: 'N/A', busCompanyEmail: 'dispatch@partas.com.ph', busCompanyContact: '+63 921 567 8901', registeredDestination: 'Alabang Town Center, Muntinlupa', busPhoto: null, lastUpdated: new Date('2026-02-15T11:00:00').getTime() },
-  { id: 7, busNumber: 'OA-107', route: 'One Ayala - Pasig', busCompany: 'RRCG Transport', status: 'Active', plateNumber: 'MNO-123', capacity: 50, busAttendant: 'Ana Mendoza', busCompanyEmail: 'info@rrcgtransport.ph', busCompanyContact: '+63 918 234 5678', registeredDestination: 'Pasig City Hall Area', busPhoto: null, lastUpdated: new Date('2026-02-18T07:20:00').getTime() },
-  { id: 8, busNumber: 'OA-108', route: 'One Ayala - Cubao', busCompany: 'Genesis Transport', status: 'Active', plateNumber: 'PQR-456', capacity: 48, busAttendant: 'Ramon Cruz', busCompanyEmail: 'operations@genesistransport.ph', busCompanyContact: '+63 922 678 9012', registeredDestination: 'Araneta Center, Cubao QC', busPhoto: null, lastUpdated: new Date('2026-02-18T11:50:00').getTime() },
-  { id: 9, busNumber: 'OA-109', route: 'One Ayala - Ortigas', busCompany: 'Froehlich Tours', status: 'Maintenance', plateNumber: 'STU-789', capacity: 48, busAttendant: 'N/A', busCompanyEmail: 'contact@froehlich.com.ph', busCompanyContact: '+63 919 345 6789', registeredDestination: 'Ortigas Center, Pasig City', busPhoto: null, lastUpdated: new Date('2026-02-14T13:10:00').getTime() },
-  { id: 10, busNumber: 'OA-110', route: 'One Ayala - BGC', busCompany: 'JAM Transit', status: 'Active', plateNumber: 'VWX-012', capacity: 45, busAttendant: 'Luz Fernandez', busCompanyEmail: 'operations@jamtransit.com.ph', busCompanyContact: '+63 917 123 4567', registeredDestination: 'Bonifacio Global City, Taguig', busPhoto: null, lastUpdated: new Date('2026-02-18T06:30:00').getTime() },
-  { id: 11, busNumber: 'OA-111', route: 'One Ayala - Marikina', busCompany: 'HM Transport', status: 'Active', plateNumber: 'YZA-345', capacity: 42, busAttendant: 'Jose Villaruz', busCompanyEmail: 'support@hmtransport.ph', busCompanyContact: '+63 920 456 7890', registeredDestination: 'Marikina City Center', busPhoto: null, lastUpdated: new Date('2026-02-17T15:40:00').getTime() },
-  { id: 12, busNumber: 'OA-112', route: 'One Ayala - San Juan', busCompany: 'RRCG Transport', status: 'Active', plateNumber: 'BCD-678', capacity: 50, busAttendant: 'Elena Torres', busCompanyEmail: 'info@rrcgtransport.ph', busCompanyContact: '+63 918 234 5678', registeredDestination: 'San Juan City Hall', busPhoto: null, lastUpdated: new Date('2026-02-18T12:15:00').getTime() },
-  { id: 13, busNumber: 'OA-113', route: 'One Ayala - Alabang', busCompany: 'Partas Transport', status: 'Inactive', plateNumber: 'EFG-901', capacity: 52, busAttendant: 'N/A', busCompanyEmail: 'dispatch@partas.com.ph', busCompanyContact: '+63 921 567 8901', registeredDestination: 'Alabang Town Center, Muntinlupa', busPhoto: null, lastUpdated: new Date('2026-02-13T10:00:00').getTime() },
-  { id: 14, busNumber: 'OA-114', route: 'One Ayala - Quezon City', busCompany: 'Genesis Transport', status: 'Active', plateNumber: 'HIJ-234', capacity: 48, busAttendant: 'Ricardo Bonifacio', busCompanyEmail: 'operations@genesistransport.ph', busCompanyContact: '+63 922 678 9012', registeredDestination: 'Quezon City Circle, QC', busPhoto: null, lastUpdated: new Date('2026-02-18T13:00:00').getTime() },
-  { id: 15, busNumber: 'OA-115', route: 'One Ayala - Pasig', busCompany: 'Froehlich Tours', status: 'Active', plateNumber: 'KLM-567', capacity: 48, busAttendant: 'Gloria Martinez', busCompanyEmail: 'contact@froehlich.com.ph', busCompanyContact: '+63 919 345 6789', registeredDestination: 'Pasig City Hall Area', busPhoto: null, lastUpdated: new Date('2026-02-16T09:25:00').getTime() },
-];
+import { fetchBuses, createBus } from '../services/api';
 
 function Buses() {
-  const [buses, setBuses] = useState([]); // Use empty array [] when API is ready
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
-  const [selectedBus, setSelectedBus] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('lastUpdated');
-  const [sortOrder, setSortOrder] = useState('desc');
+  const [buses, setBuses] = useState([]); 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [selectedBus, setSelectedBus] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
   const [newBus, setNewBus] = useState({
-    busNumber: '',
-    route: '',
-    busCompany: '',
-    status: 'Active',
-    plateNumber: '',
+    bus_number: '',       // Required by backend
+    plate_number: '',
     capacity: '',
-    busAttendant: '',
-    busCompanyEmail: '',
-    busCompanyContact: '',
-    registeredDestination: '',
-    busPhoto: null
+    priority_seat: '',    // Required by backend
+    status: 'Active',
+    route_name: '',
+    origin: '',           // Required by backend
+    registered_destination: '',
+    operator: '',
+    company_email: '',
+    company_contact: '',
+    bus_attendant: '',
+    driver_name: '' 
   });
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setBuses(initialBuses);
-      setLoading(false);
-    }, 700);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // API Integration - Uncomment when backend is ready
-  /*
-  useEffect(() => {
     loadBuses();
-  }, [currentPage, searchQuery, sortBy, sortOrder]);
+  }, []);
 
   const loadBuses = async () => {
     try {
       setLoading(true);
-      setError(null);
-      const data = await fetchBuses({
-        page: currentPage,
-        limit: itemsPerPage,
-        search: searchQuery,
-        sortBy: sortBy,
-        sortOrder: sortOrder
-      });
-      setBuses(data.buses); // Adjust based on your API response structure
-      // If your API returns totalCount, you can calculate totalPages:
-      // setTotalPages(Math.ceil(data.totalCount / itemsPerPage));
+      const data = await fetchBuses();
+      // Handle different API response structures
+      setBuses(Array.isArray(data) ? data : (data.buses || []));
     } catch (err) {
-      setError(err.message || 'Failed to load buses');
-      console.error('Error loading buses:', err);
+      console.error("Fetch failed:", err);
+      setBuses([]); 
     } finally {
       setLoading(false);
     }
   };
-  */
 
-  // Filter buses based on search query
-  const filteredBuses = buses.filter(bus => {
-    const query = searchQuery.toLowerCase();
-    return (
-      bus.busNumber.toLowerCase().includes(query) ||
-      bus.route.toLowerCase().includes(query) ||
-      bus.busCompany.toLowerCase().includes(query) ||
-      bus.plateNumber.toLowerCase().includes(query) ||
-      bus.busAttendant.toLowerCase().includes(query) ||
-      bus.status.toLowerCase().includes(query)
-    );
-  });
-
-  // Sort buses
-  const sortedBuses = [...filteredBuses].sort((a, b) => {
-    let aValue, bValue;
-
-    switch (sortBy) {
-      case 'busNumber':
-        aValue = a.busNumber;
-        bValue = b.busNumber;
-        break;
-      case 'route':
-        aValue = a.route;
-        bValue = b.route;
-        break;
-      case 'busCompany':
-        aValue = a.busCompany;
-        bValue = b.busCompany;
-        break;
-      case 'status':
-        aValue = a.status;
-        bValue = b.status;
-        break;
-      case 'capacity':
-        aValue = a.capacity;
-        bValue = b.capacity;
-        break;
-      case 'lastUpdated':
-      default:
-        aValue = a.lastUpdated;
-        bValue = b.lastUpdated;
-        break;
-    }
-
-    if (sortBy === 'capacity' || sortBy === 'lastUpdated') {
-      // Numeric comparison
-      return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
-    } else {
-      // String comparison
-      if (sortOrder === 'asc') {
-        return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
-      } else {
-        return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
-      }
-    }
-  });
-
-  // Calculate pagination
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = sortedBuses.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.max(1, Math.ceil(sortedBuses.length / itemsPerPage));
-
-  // Change page
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
-  // Reset to first page when search or sort changes
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value);
-    setCurrentPage(1);
-  };
-
-  const handleSortChange = (e) => {
-    setSortBy(e.target.value);
-    setCurrentPage(1);
-  };
-
-  const handleSortOrderToggle = () => {
-    setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
-    setCurrentPage(1);
-  };
-
-  // Handle row click
-  const handleRowClick = (bus) => {
-    setSelectedBus(bus);
-    setShowModal(true);
-  };
-
-  // Close modal
-  const closeModal = () => {
-    setShowModal(false);
-    setSelectedBus(null);
-  };
-
-  // Open add bus modal
-  const openAddModal = () => {
-    setShowAddModal(true);
-  };
-
-  // Close add bus modal
-  const closeAddModal = () => {
-    setShowAddModal(false);
-    setNewBus({
-      busNumber: '',
-      route: '',
-      busCompany: '',
-      status: 'Active',
-      plateNumber: '',
-      capacity: '',
-      busAttendant: '',
-      busCompanyEmail: '',
-      busCompanyContact: '',
-      registeredDestination: '',
-      busPhoto: null
-    });
-  };
-
-  // Handle input change in add bus form
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewBus(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setNewBus(prev => ({ ...prev, [name]: value }));
   };
 
-  // Handle form submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate required fields
-    if (!newBus.busNumber || !newBus.route || !newBus.busCompany || 
-        !newBus.plateNumber || !newBus.capacity || !newBus.busAttendant ||
-        !newBus.busCompanyEmail || !newBus.busCompanyContact || 
-        !newBus.registeredDestination) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    // API Integration - Uncomment when backend is ready
-    /*
-    try {
-      setLoading(true);
-      const newBusData = {
-        ...newBus,
-        capacity: parseInt(newBus.capacity)
-      };
-      const createdBus = await createBus(newBusData);
-      setBuses(prev => [createdBus, ...prev]); // Add to beginning (latest first)
-      closeAddModal();
-      alert(`Bus ${newBus.busNumber} added successfully!`);
-    } catch (err) {
-      setError(err.message || 'Failed to add bus');
-      alert('Failed to add bus. Please try again.');
-      console.error('Error adding bus:', err);
-    } finally {
-      setLoading(false);
-    }
-    */
-
-    // Local state update (current implementation)
-    // Remove this block when API is integrated
-    const newBusEntry = {
+    // Explicit conversion to Integers to avoid 422 errors
+    const submissionData = {
       ...newBus,
-      id: buses.length > 0 ? Math.max(...buses.map(b => b.id)) + 1 : 1,
-      capacity: parseInt(newBus.capacity),
-      lastUpdated: Date.now()
+      capacity: parseInt(newBus.capacity, 10) || 0,
+      priority_seat: parseInt(newBus.priority_seat, 10) || 0,
+      company_email: newBus.company_email || null,
+      company_contact: newBus.company_contact || null
     };
-    setBuses(prev => [...prev, newBusEntry]);
-    closeAddModal();
-    
-    // Show success message
-    alert(`Bus ${newBus.busNumber} added successfully!`);
-  };
 
-  // Get status color class
-  const getStatusClass = (status) => {
-    switch (status) {
-      case 'Active': return 'status-completed';
-      case 'Maintenance': return 'status-in-progress';
-      case 'Inactive': return 'status-pending';
-      default: return '';
+    try {
+      await createBus(submissionData);
+      setShowAddModal(false);
+      await loadBuses(); // Refresh data immediately
+      
+      // Reset form
+      setNewBus({
+        bus_number: '', plate_number: '', capacity: '', priority_seat: '', 
+        status: 'Active', route_name: '', origin: '', registered_destination: '', 
+        operator: '', company_email: '', company_contact: '', 
+        bus_attendant: '', driver_name: '' 
+      });
+    } catch (err) {
+      console.error("Backend Error Detail:", err.response?.data);
+      alert(`Failed to save: ${JSON.stringify(err.response?.data?.detail || "Check console")}`);
     }
   };
+
+  const handleRowClick = (bus) => {
+    setSelectedBus(bus);
+    setShowViewModal(true);
+  };
+
+  // Matched status colors to your screenshot
+  const getStatusClass = (status) => {
+    const s = (status || '').toLowerCase();
+    if (s === 'active' || s === 'available') return 'status-completed'; // Green
+    if (s === 'maintenance') return 'status-pending'; // Orange
+    return 'status-in-progress';
+  };
+
+  const filteredBuses = (buses || []).filter(bus => 
+    (bus.bus_number || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (bus.plate_number || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (bus.route_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (bus.operator || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <main className="content">
@@ -285,419 +110,148 @@ function Buses() {
               <h1>Buses</h1>
               <p className="subtitle">Manage and track all buses in the fleet</p>
             </div>
-            <button className="add-bus-btn" onClick={openAddModal}>
-              + Add New Bus
-            </button>
+            <button className="add-bus-btn" onClick={() => setShowAddModal(true)}>+ Add New Bus</button>
           </div>
         </div>
 
-        {/* Search and Sort Controls */}
+        {/* Search and Sort matched to UI */}
         <div className="search-sort-controls">
           <div className="search-bar">
             <input
               type="text"
-              placeholder="Search by bus number, route, company, plate, attendant, or status..."
-              value={searchQuery}
-              onChange={handleSearchChange}
+              placeholder="Search by bus number, route, company, plate..."
               className="search-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          
           <div className="sort-controls">
-            <label htmlFor="sortBy">Sort by:</label>
-            <select 
-              id="sortBy" 
-              value={sortBy} 
-              onChange={handleSortChange}
-              className="sort-select"
-            >
-              <option value="lastUpdated">Last Updated</option>
-              <option value="busNumber">Bus Number</option>
-              <option value="route">Route</option>
-              <option value="busCompany">Company</option>
-              <option value="status">Status</option>
-              <option value="capacity">Capacity</option>
+            <select className="sort-select">
+              <option>Last Updated</option>
             </select>
-            
-            <button 
-              onClick={handleSortOrderToggle}
-              className="sort-order-btn"
-              title={`Currently sorting ${sortOrder === 'asc' ? 'ascending' : 'descending'}`}
-            >
-              {sortOrder === 'asc' ? '↑' : '↓'}
-            </button>
+            <button className="sort-direction-btn">↓</button>
           </div>
         </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="error-message" style={{ 
-            padding: '1rem', 
-            backgroundColor: '#f8d7da', 
-            color: '#721c24', 
-            borderRadius: '6px', 
-            marginBottom: '1rem' 
-          }}>
-            {error}
-          </div>
-        )}
-
         <div className="table-container">
           <table className="requests-table">
-            <colgroup>
-              <col style={{ width: '14%' }} />
-              <col style={{ width: '24%' }} />
-              <col style={{ width: '22%' }} />
-              <col style={{ width: '14%' }} />
-              <col style={{ width: '18%' }} />
-              <col style={{ width: '8%' }} />
-            </colgroup>
             <thead>
+              {/* Header column order matched to target screenshot */}
               <tr>
-                <th>Bus Number</th>
-                <th>Route</th>
-                <th>Bus Company</th>
-                <th className="center-col">Status</th>
-                <th>Plate Number</th>
-                <th className="center-col">Capacity</th>
+                <th>BUS NUMBER</th>
+                <th>ROUTE</th>
+                <th>BUS COMPANY</th>
+                <th className="center-col">STATUS</th>
+                <th>PLATE NUMBER</th>
+                <th className="center-col">CAPACITY</th>
               </tr>
             </thead>
             <tbody>
-              {loading ? (
-                <TableSkeletonRows rows={6} columns={6} />
-              ) : currentItems.length === 0 ? (
-                <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem' }}>
-                    {searchQuery ? 'No buses found matching your search.' : 'No data on the table yet.'}
-                  </td>
-                </tr>
-              ) : (
-                currentItems.map((bus) => (
-                  <tr key={bus.id} onClick={() => handleRowClick(bus)} className="clickable-row">
-                    <td className="bus-number">{bus.busNumber}</td>
-                    <td>{bus.route}</td>
-                    <td>{bus.busCompany}</td>
+              {loading ? <TableSkeletonRows rows={10} columns={6} /> : 
+                filteredBuses.map((bus, index) => (
+                  <tr key={bus.id || index} className="clickable-row" onClick={() => handleRowClick(bus)}>
+                    <td className="bus-number-cell">{bus.bus_number}</td>
+                    <td>{bus.route_name || 'No Route'}</td>
+                    <td>{bus.operator || 'Independent'}</td>
                     <td className="center-col">
                       <span className={`status-badge ${getStatusClass(bus.status)}`}>
                         {bus.status}
                       </span>
                     </td>
-                    <td>{bus.plateNumber}</td>
+                    <td>{bus.plate_number}</td>
                     <td className="center-col">{bus.capacity}</td>
                   </tr>
                 ))
-              )}
+              }
             </tbody>
           </table>
-        </div>
 
-        {sortedBuses.length > 0 && (
-          <div className="pagination">
-            <button
-              onClick={() => paginate(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="pagination-btn"
-            >
-              Previous
-            </button>
-
-            <div className="page-numbers">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
-                <button
-                  key={number}
-                  onClick={() => paginate(number)}
-                  className={`page-number ${currentPage === number ? 'active' : ''}`}
-                >
-                  {number}
-                </button>
-              ))}
+          {/* Pagination Footer matched to UI */}
+          <div className="table-footer">
+            <p>Showing 1 to {filteredBuses.length} of {buses.length} buses</p>
+            <div className="pagination">
+              <button className="page-btn">Previous</button>
+              <button className="page-btn active">1</button>
+              <button className="page-btn">2</button>
+              <button className="page-btn">Next</button>
             </div>
-
-            <button
-              onClick={() => paginate(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="pagination-btn"
-            >
-              Next
-            </button>
           </div>
-        )}
-
-        {sortedBuses.length > 0 && (
-          <div className="table-info">
-            Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, sortedBuses.length)} of {sortedBuses.length} buses
-            {searchQuery && ` (filtered from ${buses.length} total)`}
-          </div>
-        )}
+        </div>
       </div>
 
-      {/* Add Bus Modal */}
       {showAddModal && (
-        <div className="modal-overlay" onClick={closeAddModal}>
-          <div className="modal-content add-bus-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay">
+          <div className="modal-content add-bus-modal">
             <div className="modal-header">
               <h2>Add New Bus</h2>
-              <button className="close-btn" onClick={closeAddModal}>&times;</button>
+              <button className="close-btn" onClick={() => setShowAddModal(false)}>&times;</button>
             </div>
-            
-            <form onSubmit={handleSubmit} className="modal-body">
-              <div className="form-grid">
-                <div className="form-section">
-                  <h3>Bus Information</h3>
-                  
+            <div className="modal-body scrollable-modal">
+              <form onSubmit={handleSubmit}>
+                <section className="form-section">
+                  <h3 className="section-title">Bus Information</h3>
                   <div className="form-group">
-                    <label htmlFor="busNumber">Bus Number *</label>
-                    <input
-                      type="text"
-                      id="busNumber"
-                      name="busNumber"
-                      value={newBus.busNumber}
-                      onChange={handleInputChange}
-                      placeholder="e.g., OA-116"
-                      required
-                    />
+                    <label>Bus Number *</label>
+                    <input name="bus_number" value={newBus.bus_number} onChange={handleInputChange} required placeholder="e.g., OA-116" />
                   </div>
-
                   <div className="form-group">
-                    <label htmlFor="plateNumber">Plate Number *</label>
-                    <input
-                      type="text"
-                      id="plateNumber"
-                      name="plateNumber"
-                      value={newBus.plateNumber}
-                      onChange={handleInputChange}
-                      placeholder="e.g., ABC-123"
-                      required
-                    />
+                    <label>Plate Number *</label>
+                    <input name="plate_number" value={newBus.plate_number} onChange={handleInputChange} required placeholder="e.g., ABC-123" />
                   </div>
-
                   <div className="form-group">
-                    <label htmlFor="capacity">Capacity *</label>
-                    <input
-                      type="number"
-                      id="capacity"
-                      name="capacity"
-                      value={newBus.capacity}
-                      onChange={handleInputChange}
-                      placeholder="e.g., 45"
-                      min="1"
-                      required
-                    />
+                    <label>Capacity *</label>
+                    <input type="number" name="capacity" value={newBus.capacity} onChange={handleInputChange} required placeholder="45" />
                   </div>
-
                   <div className="form-group">
-                    <label htmlFor="status">Status *</label>
-                    <select
-                      id="status"
-                      name="status"
-                      value={newBus.status}
-                      onChange={handleInputChange}
-                      required
-                    >
+                    <label>Priority Seats *</label>
+                    <input type="number" name="priority_seat" value={newBus.priority_seat} onChange={handleInputChange} required placeholder="10" />
+                  </div>
+                  <div className="form-group">
+                    <label>Status *</label>
+                    <select name="status" value={newBus.status} onChange={handleInputChange}>
                       <option value="Active">Active</option>
                       <option value="Maintenance">Maintenance</option>
-                      <option value="Inactive">Inactive</option>
                     </select>
                   </div>
-                </div>
+                </section>
 
-                <div className="form-section">
-                  <h3>Route Information</h3>
-                  
+                <section className="form-section">
+                  <h3 className="section-title">Route Information</h3>
                   <div className="form-group">
-                    <label htmlFor="route">Route *</label>
-                    <input
-                      type="text"
-                      id="route"
-                      name="route"
-                      value={newBus.route}
-                      onChange={handleInputChange}
-                      placeholder="e.g., One Ayala - BGC"
-                      required
-                    />
+                    <label>Origin *</label>
+                    <input name="origin" value={newBus.origin} onChange={handleInputChange} required placeholder="e.g., Makati" />
                   </div>
-
                   <div className="form-group">
-                    <label htmlFor="registeredDestination">Registered Destination *</label>
-                    <input
-                      type="text"
-                      id="registeredDestination"
-                      name="registeredDestination"
-                      value={newBus.registeredDestination}
-                      onChange={handleInputChange}
-                      placeholder="e.g., Bonifacio Global City, Taguig"
-                      required
-                    />
+                    <label>Route *</label>
+                    <input name="route_name" value={newBus.route_name} onChange={handleInputChange} required placeholder="e.g., One Ayala - BGC" />
                   </div>
-                </div>
-
-                <div className="form-section">
-                  <h3>Bus Company</h3>
-                  
                   <div className="form-group">
-                    <label htmlFor="busCompany">Company Name *</label>
-                    <input
-                      type="text"
-                      id="busCompany"
-                      name="busCompany"
-                      value={newBus.busCompany}
-                      onChange={handleInputChange}
-                      placeholder="e.g., JAM Transit"
-                      required
-                    />
+                    <label>Registered Destination *</label>
+                    <input name="registered_destination" value={newBus.registered_destination} onChange={handleInputChange} required placeholder="e.g., Pasig City" />
                   </div>
+                </section>
 
+                <section className="form-section">
+                  <h3 className="section-title">Bus Company</h3>
                   <div className="form-group">
-                    <label htmlFor="busCompanyEmail">Company Email *</label>
-                    <input
-                      type="email"
-                      id="busCompanyEmail"
-                      name="busCompanyEmail"
-                      value={newBus.busCompanyEmail}
-                      onChange={handleInputChange}
-                      placeholder="e.g., operations@company.com.ph"
-                      required
-                    />
+                    <label>Company Name *</label>
+                    <input name="operator" value={newBus.operator} onChange={handleInputChange} required placeholder="e.g., JAM Transit" />
                   </div>
+                </section>
 
+                <section className="form-section attendant-section">
+                  <h3 className="section-title">Bus Attendant (Source of Truth)</h3>
                   <div className="form-group">
-                    <label htmlFor="busCompanyContact">Company Contact *</label>
-                    <input
-                      type="tel"
-                      id="busCompanyContact"
-                      name="busCompanyContact"
-                      value={newBus.busCompanyContact}
-                      onChange={handleInputChange}
-                      placeholder="e.g., +63 917 123 4567"
-                      required
-                    />
+                    <label>Assigned Bus Attendant *</label>
+                    <input name="bus_attendant" value={newBus.bus_attendant} onChange={handleInputChange} required placeholder="e.g., Juan Dela Cruz" />
                   </div>
+                </section>
+
+                <div className="form-actions">
+                  <button type="button" className="btn-cancel" onClick={() => setShowAddModal(false)}>Cancel</button>
+                  <button type="submit" className="btn-submit">Save Bus</button>
                 </div>
-
-                <div className="form-section highlight-section">
-                  <h3>Bus Attendant (Source of Truth)</h3>
-                  
-                  <div className="form-group">
-                    <label htmlFor="busAttendant">Assigned Bus Attendant *</label>
-                    <input
-                      type="text"
-                      id="busAttendant"
-                      name="busAttendant"
-                      value={newBus.busAttendant}
-                      onChange={handleInputChange}
-                      placeholder="e.g., Juan Dela Cruz"
-                      required
-                    />
-                  </div>
-
-                  <p className="info-note">
-                    * The bus attendant is the primary source of truth for all bus information and operations.
-                  </p>
-                </div>
-              </div>
-
-              <div className="form-actions">
-                <button type="button" className="btn-cancel" onClick={closeAddModal}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn-submit">
-                  Add Bus
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Bus Details Modal */}
-      {showModal && selectedBus && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Bus Details</h2>
-              <button className="close-btn" onClick={closeModal}>&times;</button>
-            </div>
-            
-            <div className="modal-body">
-              <div className="bus-photo-section">
-                <div className="bus-photo-placeholder">
-                  {selectedBus.busPhoto ? (
-                    <img src={selectedBus.busPhoto} alt={`Bus ${selectedBus.busNumber}`} />
-                  ) : (
-                    <div className="no-photo">
-                      <span>📷</span>
-                      <p>No photo available</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="bus-info-grid">
-                <div className="info-section">
-                  <h3>Bus Information</h3>
-                  <div className="info-row">
-                    <span className="info-label">Bus Number:</span>
-                    <span className="info-value">{selectedBus.busNumber}</span>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-label">Plate Number:</span>
-                    <span className="info-value">{selectedBus.plateNumber}</span>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-label">Capacity:</span>
-                    <span className="info-value">{selectedBus.capacity} passengers</span>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-label">Status:</span>
-                    <span className={`status-badge ${getStatusClass(selectedBus.status)}`}>
-                      {selectedBus.status}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="info-section">
-                  <h3>Route Information</h3>
-                  <div className="info-row">
-                    <span className="info-label">Current Route:</span>
-                    <span className="info-value">{selectedBus.route}</span>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-label">Registered Destination:</span>
-                    <span className="info-value">{selectedBus.registeredDestination}</span>
-                  </div>
-                </div>
-
-                <div className="info-section">
-                  <h3>Bus Company</h3>
-                  <div className="info-row">
-                    <span className="info-label">Company Name:</span>
-                    <span className="info-value">{selectedBus.busCompany}</span>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-label">Email:</span>
-                    <span className="info-value">
-                      <a href={`mailto:${selectedBus.busCompanyEmail}`}>{selectedBus.busCompanyEmail}</a>
-                    </span>
-                  </div>
-                  <div className="info-row">
-                    <span className="info-label">Contact Number:</span>
-                    <span className="info-value">
-                      <a href={`tel:${selectedBus.busCompanyContact}`}>{selectedBus.busCompanyContact}</a>
-                    </span>
-                  </div>
-                </div>
-
-                <div className="info-section highlight-section">
-                  <h3>Bus Attendant (Source of Truth)</h3>
-                  <div className="info-row">
-                    <span className="info-label">Assigned Attendant:</span>
-                    <span className="info-value attendant-name">{selectedBus.busAttendant}</span>
-                  </div>
-                  <p className="info-note">
-                    * The bus attendant is the primary source of truth for all bus information and operations.
-                  </p>
-                </div>
-              </div>
+              </form>
             </div>
           </div>
         </div>
