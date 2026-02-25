@@ -279,6 +279,85 @@
   gap: 0.4rem;
 }
 
+.route-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 100%;
+}
+
+.route-origin,
+.route-destination,
+.route-single,
+.route-fallback {
+  display: inline-block;
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.route-origin {
+  font-weight: 600;
+}
+
+.route-destination {
+  color: #5f6a72;
+}
+
+.route-chevron {
+  font-size: 1rem;
+  color: #7a8691;
+  flex-shrink: 0;
+}
+
+.route-fallback {
+  color: #999;
+}
+
+.primary-cta-btn {
+  padding: 0.75rem 1.5rem !important;
+  background-color: $primary-color !important;
+  color: white !important;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem !important;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    background-color: color.adjust($primary-color, $lightness: -10%) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+    filter: none;
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.inline-edit-input {
+  width: 100%;
+  max-width: 320px;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 0.92rem;
+  background: #fff;
+
+  &:focus {
+    outline: none;
+    border-color: $primary-color;
+    box-shadow: 0 0 0 2px rgba(9, 107, 114, 0.15);
+  }
+}
+
 .table-action-btn {
   border: none;
   border-radius: 6px;
@@ -293,8 +372,8 @@
   }
 
   &.archive {
-    background-color: #d8edf0;
-    color: #0b6369;
+    background-color: $secondary-color;
+    color: white;
   }
 
   &.restore {
@@ -312,6 +391,7 @@
   margin-top: 1.5rem;
   display: flex;
   justify-content: flex-end;
+  gap: 1rem;
 }
 
 // Priority badges
@@ -500,6 +580,48 @@
   overflow-y: auto;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.3s ease-out;
+}
+
+.confirmation-overlay {
+  z-index: 1300;
+}
+
+.confirmation-content {
+  max-width: 560px;
+
+  .modal-header {
+    padding: 1rem 1.25rem;
+
+    h2 {
+      font-size: 1.3rem;
+    }
+  }
+
+  .modal-body {
+    padding: 1.15rem 1.25rem 1.25rem;
+
+    p {
+      margin: 0;
+      line-height: 1.4;
+    }
+  }
+
+  .info-note {
+    margin-top: 0.7rem;
+    padding: 0.6rem;
+    font-size: 0.82rem;
+  }
+
+  .modal-actions-row {
+    margin-top: 1rem;
+    gap: 0.6rem;
+  }
+
+  .table-action-btn {
+    padding: 0.4rem 0.7rem;
+    min-width: 128px;
+    font-size: 0.78rem;
+  }
 }
 
 .modal-header {
