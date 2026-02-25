@@ -3,6 +3,7 @@ import '../styles/Body.scss';
 import '../styles/Requests.scss';
 import { MdCheckCircle, MdClose, MdHighlightOff } from 'react-icons/md';
 import TableSkeletonRows from './TableSkeletonRows';
+import SuccessModal from './SuccessModal';
 import {
   fetchActivationRequests,
   getRequestsTempData,
@@ -18,6 +19,12 @@ function Requests() {
   const [actionLoading, setActionLoading] = useState(false);
   const [batchActionLoading, setBatchActionLoading] = useState(false);
   const [actionError, setActionError] = useState('');
+  const [successModal, setSuccessModal] = useState({
+    open: false,
+    title: '',
+    message: '',
+    detail: '',
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
@@ -157,6 +164,12 @@ function Requests() {
     }
 
     setActionLoading(false);
+    setSuccessModal({
+      open: true,
+      title: nextStatus === 'Approved' ? 'Request Approved' : 'Request Rejected',
+      message: `The request for ${selectedRequest.fullName} was marked as ${nextStatus}.`,
+      detail: '',
+    });
     closeModal();
   };
 
@@ -202,6 +215,13 @@ function Requests() {
       )));
 
       setActionError(`Unable to update ${failedIds.length} request(s). Please try again.`);
+    } else {
+      setSuccessModal({
+        open: true,
+        title: nextStatus === 'Approved' ? 'Batch Approved' : 'Batch Rejected',
+        message: `${selectedRequestIds.length} requests were marked as ${nextStatus}.`,
+        detail: '',
+      });
     }
 
     setSelectedRequestIds([]);
@@ -219,6 +239,14 @@ function Requests() {
 
   return (
     <main className="content">
+      <SuccessModal
+        open={successModal.open}
+        title={successModal.title}
+        message={successModal.message}
+        detail={successModal.detail}
+        onClose={() => setSuccessModal({ open: false, title: '', message: '', detail: '' })}
+      />
+
       <div className="requests-container">
         <div className="requests-header">
           <h1>Requests</h1>

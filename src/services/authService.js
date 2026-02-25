@@ -15,7 +15,6 @@ export const loginAsAdmin = async (email, password) => {
 
     // This checks if the isAdmin box is checked (true)
     if (userDoc.exists() && userDoc.data().isAdmin === true) {
-      alert("Welcome Admin!");
       return true; 
     } else {
       alert("Access Denied: You are not an admin.");

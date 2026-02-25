@@ -17,24 +17,35 @@ import {
   Legend,
 } from 'recharts';
 import { MdDirectionsBus, MdAltRoute, MdTraffic, MdTimer } from 'react-icons/md';
-import { fetchDashboardBuses, getDashboardTempBuses } from '../services/dashboardService';
+import { fetchDashboardBuses } from '../services/dashboardService';
 
 function Dashboard() {
   const [leftView, setLeftView] = useState('weekly');
   const [rightView, setRightView] = useState('weekly');
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [reportPreviewUrl, setReportPreviewUrl] = useState('');
   const [reportFileName, setReportFileName] = useState('dashboard-analytics-report.pdf');
-  const [buses, setBuses] = useState(() => getDashboardTempBuses());
+  const [dashboardWarning, setDashboardWarning] = useState('');
+  const [buses, setBuses] = useState([]);
 
   useEffect(() => {
     let isMounted = true;
 
     const loadDashboardData = async () => {
-      const sourceBuses = await fetchDashboardBuses();
+      setIsLoading(true);
 
-      if (isMounted && Array.isArray(sourceBuses) && sourceBuses.length > 0) {
-        setBuses(sourceBuses);
+      try {
+        const result = await fetchDashboardBuses();
+
+        if (isMounted && result && Array.isArray(result.buses)) {
+          setBuses(result.buses);
+          setDashboardWarning(result.warning || '');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -71,46 +82,41 @@ function Dashboard() {
       weeklyMetrics.set(day, {
         label: day,
         buses: 0,
-        online: 0,
-        manual: 0,
+        qnext: 0,
+        traditional: 0,
       });
     });
 
     let totalCapacity = 0;
 
     buses.forEach((bus) => {
-      if (statusCounts[bus.status] !== undefined) {
-        statusCounts[bus.status] += 1;
-      }
+      const normalizedStatus = bus.status === 'Active' || bus.status === 'Maintenance' || bus.status === 'Inactive'
+        ? bus.status
+        : 'Inactive';
+
+      statusCounts[normalizedStatus] += 1;
+      const isActiveBus = normalizedStatus === 'Active';
 
       routeCounts.set(bus.route, (routeCounts.get(bus.route) || 0) + 1);
 
       const existingCompanyMetrics = companyMetrics.get(bus.busCompany) || {
         label: bus.busCompany,
         buses: 0,
-        online: 0,
-        manual: 0,
+        qnext: 0,
+        traditional: 0,
       };
 
       existingCompanyMetrics.buses += 1;
+      const busCapacity = Math.max(0, Number(bus.capacity || 0));
+      const boardedFromQnextRaw = Number(bus.qnextBoarded || 0);
+      const boardedFromQnext = Math.min(busCapacity, Math.max(0, boardedFromQnextRaw));
+      const traditionalQueueCount = Math.max(0, busCapacity - boardedFromQnext);
 
-      const baseQueue = Math.max(1, Math.round(Number(bus.capacity || 0) * 0.8));
-      const routeBoost = bus.route.includes('BGC') || bus.route.includes('Ortigas') ? 0.05 : 0;
-      const onlineRatio = bus.status === 'Active'
-        ? 0.62 + routeBoost
-        : bus.status === 'Maintenance'
-          ? 0.48 + routeBoost
-          : 0.40 + routeBoost;
-
-      const clampedOnlineRatio = Math.max(0.2, Math.min(0.85, onlineRatio));
-      const onlineQueueCount = Math.round(baseQueue * clampedOnlineRatio);
-      const manualQueueCount = Math.max(0, baseQueue - onlineQueueCount);
-
-      existingCompanyMetrics.online += onlineQueueCount;
-      existingCompanyMetrics.manual += manualQueueCount;
+      existingCompanyMetrics.qnext += boardedFromQnext;
+      existingCompanyMetrics.traditional += traditionalQueueCount;
       companyMetrics.set(bus.busCompany, existingCompanyMetrics);
 
-      totalCapacity += Number(bus.capacity || 0);
+      totalCapacity += busCapacity;
 
       const weekDayName = new Date(bus.lastUpdated).toLocaleDateString('en-US', {
         weekday: 'long',
@@ -125,36 +131,36 @@ function Dashboard() {
       const weekDayData = weeklyMetrics.get(weekDayName) || {
         label: weekDayName,
         buses: 0,
-        online: 0,
-        manual: 0,
+        qnext: 0,
+        traditional: 0,
       };
 
       weekDayData.buses += 1;
-      weekDayData.online += onlineQueueCount;
-      weekDayData.manual += manualQueueCount;
+      weekDayData.qnext += boardedFromQnext;
+      weekDayData.traditional += traditionalQueueCount;
 
       weeklyMetrics.set(weekDayName, weekDayData);
 
       const monthData = monthlyMetrics.get(monthName) || {
         label: monthName,
         buses: 0,
-        online: 0,
-        manual: 0,
+        qnext: 0,
+        traditional: 0,
       };
       monthData.buses += 1;
-      monthData.online += onlineQueueCount;
-      monthData.manual += manualQueueCount;
+      monthData.qnext += boardedFromQnext;
+      monthData.traditional += traditionalQueueCount;
       monthlyMetrics.set(monthName, monthData);
 
       const yearData = yearlyMetrics.get(yearLabel) || {
         label: yearLabel,
         buses: 0,
-        online: 0,
-        manual: 0,
+        qnext: 0,
+        traditional: 0,
       };
       yearData.buses += 1;
-      yearData.online += onlineQueueCount;
-      yearData.manual += manualQueueCount;
+      yearData.qnext += boardedFromQnext;
+      yearData.traditional += traditionalQueueCount;
       yearlyMetrics.set(yearLabel, yearData);
     });
 
@@ -169,7 +175,7 @@ function Dashboard() {
 
     const monthlyData = monthOrder.map((month) => {
       const monthData = monthlyMetrics.get(month);
-      return monthData || { label: month, buses: 0, online: 0, manual: 0 };
+      return monthData || { label: month, buses: 0, qnext: 0, traditional: 0 };
     });
 
     const yearlyData = Array.from(yearlyMetrics.values()).sort((leftYear, rightYear) => Number(leftYear.label) - Number(rightYear.label));
@@ -211,12 +217,12 @@ function Dashboard() {
       : analytics.yearlyData;
 
   const rightPanelTitle = rightView === 'weekly'
-    ? 'Online Queueing VS Manual Line per week'
+    ? 'Traditional Queue vs QNExT per week'
     : rightView === 'monthly'
-      ? 'Online Queueing VS Manual Line per month'
-      : 'Online Queueing VS Manual Line per year';
+      ? 'Traditional Queue vs QNExT per month'
+      : 'Traditional Queue vs QNExT per year';
 
-  const companyQueueMixData = analytics.companyData.slice(0, 6);
+  const companyStatusMixData = analytics.companyData.slice(0, 6);
   const topRouteVolumeData = analytics.routeData.slice(0, 6);
 
   const formatReportDate = (timestamp) => new Date(timestamp).toLocaleString('en-US', {
@@ -286,12 +292,12 @@ function Dashboard() {
 
       autoTable(doc, {
         startY: doc.lastAutoTable.finalY + 16,
-        head: [['Company', 'Online Queue', 'Manual Line', 'Total Queue Load']],
-        body: companyQueueMixData.map((item) => [
+        head: [['Company', 'Traditional Queue', 'QNExT', 'Total Buses']],
+        body: companyStatusMixData.map((item) => [
           item.label,
-          item.online,
-          item.manual,
-          item.online + item.manual,
+          item.traditional,
+          item.qnext,
+          item.buses,
         ]),
         styles: { fontSize: 9 },
         headStyles: { fillColor: [9, 107, 114] },
@@ -347,12 +353,40 @@ function Dashboard() {
             type="button"
             className="report-btn"
             onClick={handleGenerateReport}
-            disabled={isGeneratingReport}
+            disabled={isGeneratingReport || isLoading || buses.length === 0}
           >
             {isGeneratingReport ? 'Generating PDF...' : 'Preview Report (PDF)'}
           </button>
         </div>
 
+        {dashboardWarning && (
+          <div className="dashboard-warning-banner" role="alert">
+            {dashboardWarning}
+          </div>
+        )}
+
+        {isLoading ? (
+          <>
+            <div className="dashboard-kpis dashboard-kpis-loading">
+              {Array.from({ length: 4 }, (_, index) => (
+                <div key={index} className="kpi-card kpi-card-skeleton">
+                  <div className="skeleton-block skeleton-kpi-label" />
+                  <div className="skeleton-block skeleton-kpi-value" />
+                </div>
+              ))}
+            </div>
+
+            <div className="dashboard-charts-grid">
+              {Array.from({ length: 4 }, (_, index) => (
+                <div key={index} className="chart-container dashboard-panel dashboard-panel-skeleton">
+                  <div className="skeleton-block skeleton-panel-title" />
+                  <div className="skeleton-block skeleton-chart" />
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
         <div className="dashboard-kpis">
           <div className="kpi-card">
             <div>
@@ -432,26 +466,26 @@ function Dashboard() {
                 <XAxis dataKey="label" interval={0} tick={{ fontSize: 12 }} />
                 <YAxis allowDecimals={false} />
                 <Tooltip />
-                <Area type="monotone" dataKey="online" name="Online Queue" stroke="#096B72" fill="#096B72" fillOpacity={0.22} />
-                <Area type="monotone" dataKey="manual" name="Manual Line" stroke="#E3655B" fill="#E3655B" fillOpacity={0.16} />
+                <Area type="monotone" dataKey="traditional" name="Traditional Queue" stroke="#E3655B" fill="#E3655B" fillOpacity={0.16} />
+                <Area type="monotone" dataKey="qnext" name="QNExT" stroke="#096B72" fill="#096B72" fillOpacity={0.22} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
 
           <div className="chart-container dashboard-panel">
             <div className="panel-header">
-              <h2>Queue mix by bus company (Top 6)</h2>
+              <h2>Traditional Queue vs QNExT by bus company (Top 6)</h2>
             </div>
 
             <ResponsiveContainer width="100%" height={290}>
-              <BarChart data={companyQueueMixData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+              <BarChart data={companyStatusMixData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="label" interval={0} tick={{ fontSize: 11 }} />
                 <YAxis allowDecimals={false} />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="online" name="Online Queue" stackId="queue" fill="#096B72" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="manual" name="Manual Line" stackId="queue" fill="#E3655B" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="traditional" name="Traditional Queue" stackId="queue" fill="#E3655B" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="qnext" name="QNExT" stackId="queue" fill="#096B72" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -472,6 +506,8 @@ function Dashboard() {
             </ResponsiveContainer>
           </div>
         </div>
+          </>
+        )}
       </div>
 
       {reportPreviewUrl && (

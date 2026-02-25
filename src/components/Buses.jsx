@@ -1,16 +1,11 @@
 import { useState, useEffect } from 'react';
+import { MdChevronRight } from 'react-icons/md';
 import '../styles/Body.scss';
 import '../styles/Requests.scss';
 import TableSkeletonRows from './TableSkeletonRows';
-<<<<<<< HEAD
-import {
-  getArchivedBusesData,
-  getBusesData,
-  saveArchivedBusesData,
-  saveBusesData,
-} from '../data/busesData';
-// Uncomment when integrating with API:
-// import { fetchBuses, createBus, updateBus, deleteBus } from '../services/api';
+import { createBus, deleteBus, fetchBuses, updateBus } from '../services/api';
+import { syncBusToFirebase } from '../services/busFirebaseSyncService';
+import SuccessModal from './SuccessModal';
 
 function Buses() {
   const [buses, setBuses] = useState([]); // Use empty array [] when API is ready
@@ -19,86 +14,86 @@ function Buses() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [selectedBus, setSelectedBus] = useState(null);
+  const [editingBus, setEditingBus] = useState(null);
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('active');
   const [sortBy, setSortBy] = useState('lastUpdated');
   const [sortOrder, setSortOrder] = useState('desc');
-=======
-import { fetchBuses, createBus } from '../services/api';
-
-function Buses() {
-  const [buses, setBuses] = useState([]); 
->>>>>>> dev-api
   const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [selectedBus, setSelectedBus] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-
+  const [error, setError] = useState(null);
+  const [successModal, setSuccessModal] = useState({
+    open: false,
+    title: '',
+    message: '',
+    detail: '',
+  });
+  const [archiveConfirmModal, setArchiveConfirmModal] = useState({
+    open: false,
+    busIds: [],
+  });
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState({
+    open: false,
+    busIds: [],
+  });
   const [newBus, setNewBus] = useState({
-    bus_number: '',       // Required by backend
-    plate_number: '',
+    busNumber: '',
+    route: '',
+    busCompany: '',
+    status: 'Available',
+    plateNumber: '',
     capacity: '',
-    priority_seat: '',    // Required by backend
-    status: 'Active',
-    route_name: '',
-    origin: '',           // Required by backend
-    registered_destination: '',
-    operator: '',
-    company_email: '',
-    company_contact: '',
-    bus_attendant: '',
-    driver_name: '' 
+    busAttendant: '',
+    busCompanyEmail: '',
+    busCompanyContact: '',
+    registeredDestination: '',
+    busPhoto: null
   });
 
   useEffect(() => {
-<<<<<<< HEAD
-    const timer = setTimeout(() => {
-      setBuses(getBusesData());
-      setArchivedBuses(getArchivedBusesData());
-      setLoading(false);
-    }, 700);
+    let isMounted = true;
 
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    if (!loading) {
-      saveBusesData(buses);
-    }
-  }, [buses, loading]);
-
-  useEffect(() => {
-    if (!loading) {
-      saveArchivedBusesData(archivedBuses);
-    }
-  }, [archivedBuses, loading]);
-
-  // API Integration - Uncomment when backend is ready
-  /*
-  useEffect(() => {
-=======
->>>>>>> dev-api
-    loadBuses();
-  }, []);
-
-  const loadBuses = async () => {
-    try {
+    const loadInitialBuses = async () => {
       setLoading(true);
-      const data = await fetchBuses();
-      // Handle different API response structures
-      setBuses(Array.isArray(data) ? data : (data.buses || []));
-    } catch (err) {
-      console.error("Fetch failed:", err);
-      setBuses([]); 
-    } finally {
-      setLoading(false);
-    }
-  };
+      setError(null);
 
-<<<<<<< HEAD
+      try {
+        const apiBuses = await fetchBuses();
+
+        if (!isMounted) {
+          return;
+        }
+
+        const activeBuses = apiBuses.filter((bus) => bus.status !== 'Offline');
+        const archivedFromApi = apiBuses.filter((bus) => bus.status === 'Offline');
+
+        setBuses(activeBuses);
+        setArchivedBuses(archivedFromApi);
+      } catch (err) {
+        if (!isMounted) {
+          return;
+        }
+
+        console.error('Error loading buses from API:', err);
+        setError('Unable to reach the API. Please check your connection or login session.');
+        setBuses([]);
+        setArchivedBuses([]);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadInitialBuses();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Filter buses based on search query
   const sourceBuses = viewMode === 'active' ? buses : archivedBuses;
 
@@ -190,7 +185,47 @@ function Buses() {
     setCurrentPage(1);
   };
 
-  const archiveBusIds = (busIds) => {
+  const getRequestErrorMessage = (err, fallbackMessage) => {
+    const validationDetails = err?.response?.data?.detail;
+
+    if (Array.isArray(validationDetails) && validationDetails.length > 0) {
+      return validationDetails
+        .map((item) => {
+          const location = Array.isArray(item?.loc) ? item.loc[item.loc.length - 1] : 'field';
+          return `${location}: ${item?.msg || 'invalid value'}`;
+        })
+        .join(' | ');
+    }
+
+    return err?.response?.data?.message || err?.message || fallbackMessage;
+  };
+
+  const renderRouteWithChevron = (routeValue) => {
+    const routeText = String(routeValue || '').trim();
+
+    if (!routeText) {
+      return <span className="route-fallback">N/A</span>;
+    }
+
+    const routeParts = routeText.split('-').map((part) => part.trim()).filter(Boolean);
+
+    if (routeParts.length < 2) {
+      return <span className="route-single">{routeText}</span>;
+    }
+
+    const origin = routeParts[0];
+    const destination = routeParts.slice(1).join(' - ');
+
+    return (
+      <span className="route-display" title={`${origin} → ${destination}`}>
+        <span className="route-origin">{origin}</span>
+        <MdChevronRight className="route-chevron" aria-hidden="true" />
+        <span className="route-destination">{destination}</span>
+      </span>
+    );
+  };
+
+  const archiveBusIds = async (busIds) => {
     if (!Array.isArray(busIds) || busIds.length === 0) {
       return;
     }
@@ -202,51 +237,80 @@ function Buses() {
       return;
     }
 
-    const archivedEntries = busesToArchive.map((bus) => ({
-      ...bus,
-      previousStatus: bus.status,
-      status: 'Archived',
-      archivedAt: Date.now(),
-      lastUpdated: Date.now(),
-    }));
+    try {
+      setLoading(true);
+      setError(null);
 
-    setArchivedBuses((previousArchivedBuses) => [...archivedEntries, ...previousArchivedBuses]);
-    setBuses((previousBuses) => previousBuses.filter((bus) => !idsToArchive.has(bus.id)));
-    setSelectedBusIds((previousSelectedBusIds) => previousSelectedBusIds.filter((id) => !idsToArchive.has(id)));
+      await Promise.all(
+        busesToArchive.map((bus) => updateBus(bus.id, { status: 'offline' }))
+      );
 
-    if (selectedBus && idsToArchive.has(selectedBus.id)) {
-      closeModal();
+      const archivedEntries = busesToArchive.map((bus) => ({
+        ...bus,
+        previousStatus: bus.status,
+        status: 'Offline',
+        archivedAt: Date.now(),
+        lastUpdated: Date.now(),
+      }));
+
+      setArchivedBuses((previousArchivedBuses) => [...archivedEntries, ...previousArchivedBuses]);
+      setBuses((previousBuses) => previousBuses.filter((bus) => !idsToArchive.has(bus.id)));
+      setSelectedBusIds((previousSelectedBusIds) => previousSelectedBusIds.filter((id) => !idsToArchive.has(id)));
+
+      setSuccessModal({
+        open: true,
+        title: 'Bus Archived',
+        message: idsToArchive.size > 1
+          ? `${idsToArchive.size} buses were moved to Offline.`
+          : 'Bus was moved to Offline.',
+        detail: 'You can restore it anytime from the Offline tab.',
+      });
+
+      if (selectedBus && idsToArchive.has(selectedBus.id)) {
+        closeModal();
+      }
+    } catch (err) {
+      const message = getRequestErrorMessage(err, 'Failed to archive buses');
+      setError(message);
+      alert(message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const deleteArchivedBusIds = (busIds, options = { confirm: true }) => {
+  const deleteArchivedBusIds = async (busIds) => {
     if (!Array.isArray(busIds) || busIds.length === 0) {
       return;
     }
 
     const idsToDelete = new Set(busIds);
 
-    if (options.confirm) {
-      const shouldDelete = window.confirm(
-        idsToDelete.size > 1
-          ? `Delete ${idsToDelete.size} archived buses permanently? This action cannot be undone.`
-          : 'Delete this archived bus permanently? This action cannot be undone.'
+    const busesToDelete = archivedBuses.filter((bus) => idsToDelete.has(bus.id));
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      await Promise.all(
+        busesToDelete.map((bus) => deleteBus(bus.id))
       );
 
-      if (!shouldDelete) {
-        return;
+      setArchivedBuses((previousArchivedBuses) => previousArchivedBuses.filter((bus) => !idsToDelete.has(bus.id)));
+      setSelectedBusIds((previousSelectedBusIds) => previousSelectedBusIds.filter((id) => !idsToDelete.has(id)));
+
+      if (selectedBus && idsToDelete.has(selectedBus.id)) {
+        closeModal();
       }
-    }
-
-    setArchivedBuses((previousArchivedBuses) => previousArchivedBuses.filter((bus) => !idsToDelete.has(bus.id)));
-    setSelectedBusIds((previousSelectedBusIds) => previousSelectedBusIds.filter((id) => !idsToDelete.has(id)));
-
-    if (selectedBus && idsToDelete.has(selectedBus.id)) {
-      closeModal();
+    } catch (err) {
+      const message = getRequestErrorMessage(err, 'Failed to delete archived buses');
+      setError(message);
+      alert(message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const unarchiveBusIds = (busIds) => {
+  const unarchiveBusIds = async (busIds) => {
     if (!Array.isArray(busIds) || busIds.length === 0) {
       return;
     }
@@ -258,47 +322,119 @@ function Buses() {
       return;
     }
 
-    const restoredBuses = busesToRestore.map((bus) => {
-      const { previousStatus, archivedAt, ...restBus } = bus;
+    try {
+      setLoading(true);
+      setError(null);
 
-      return {
-        ...restBus,
-        status: previousStatus || 'Inactive',
-        lastUpdated: Date.now(),
-      };
-    });
+      await Promise.all(
+        busesToRestore.map((bus) => updateBus(bus.id, { status: 'active' }))
+      );
 
-    setBuses((previousBuses) => [...restoredBuses, ...previousBuses]);
-    setArchivedBuses((previousArchivedBuses) => previousArchivedBuses.filter((bus) => !idsToRestore.has(bus.id)));
-    setSelectedBusIds((previousSelectedBusIds) => previousSelectedBusIds.filter((id) => !idsToRestore.has(id)));
+      const restoredBuses = busesToRestore.map((bus) => {
+        const { previousStatus, archivedAt, ...restBus } = bus;
 
-    if (selectedBus && idsToRestore.has(selectedBus.id)) {
-      closeModal();
+        return {
+          ...restBus,
+          status: 'Active',
+          lastUpdated: Date.now(),
+        };
+      });
+
+      setBuses((previousBuses) => [...restoredBuses, ...previousBuses]);
+      setArchivedBuses((previousArchivedBuses) => previousArchivedBuses.filter((bus) => !idsToRestore.has(bus.id)));
+      setSelectedBusIds((previousSelectedBusIds) => previousSelectedBusIds.filter((id) => !idsToRestore.has(id)));
+
+      setSuccessModal({
+        open: true,
+        title: 'Bus Restored',
+        message: idsToRestore.size > 1
+          ? `${idsToRestore.size} buses were restored to active lists.`
+          : 'Bus was restored to active lists.',
+        detail: '',
+      });
+
+      if (selectedBus && idsToRestore.has(selectedBus.id)) {
+        closeModal();
+      }
+    } catch (err) {
+      const message = getRequestErrorMessage(err, 'Failed to unarchive buses');
+      setError(message);
+      alert(message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleArchiveBus = (busId) => {
-    archiveBusIds([busId]);
+  const requestArchiveConfirmation = (busIds) => {
+    if (!Array.isArray(busIds) || busIds.length === 0) {
+      return;
+    }
+
+    setArchiveConfirmModal({
+      open: true,
+      busIds: Array.from(new Set(busIds)),
+    });
   };
 
-  const handleBatchArchive = () => {
-    archiveBusIds(selectedBusIds);
+  const closeArchiveConfirmation = () => {
+    setArchiveConfirmModal({
+      open: false,
+      busIds: [],
+    });
   };
 
-  const handleDeleteArchivedBus = (busId) => {
-    deleteArchivedBusIds([busId]);
+  const confirmArchive = async () => {
+    const idsToArchive = archiveConfirmModal.busIds;
+    closeArchiveConfirmation();
+    await archiveBusIds(idsToArchive);
   };
 
-  const handleUnarchiveBus = (busId) => {
-    unarchiveBusIds([busId]);
+  const handleArchiveBus = async (busId) => {
+    requestArchiveConfirmation([busId]);
   };
 
-  const handleBatchDeleteArchived = () => {
-    deleteArchivedBusIds(selectedBusIds);
+  const handleBatchArchive = async () => {
+    requestArchiveConfirmation(selectedBusIds);
   };
 
-  const handleBatchUnarchive = () => {
-    unarchiveBusIds(selectedBusIds);
+  const requestDeleteConfirmation = (busIds) => {
+    if (!Array.isArray(busIds) || busIds.length === 0) {
+      return;
+    }
+
+    setDeleteConfirmModal({
+      open: true,
+      busIds: Array.from(new Set(busIds)),
+    });
+  };
+
+  const closeDeleteConfirmation = () => {
+    setDeleteConfirmModal({
+      open: false,
+      busIds: [],
+    });
+  };
+
+  const confirmDeleteArchived = async () => {
+    const idsToDelete = deleteConfirmModal.busIds;
+    closeDeleteConfirmation();
+    await deleteArchivedBusIds(idsToDelete);
+  };
+
+  const handleDeleteArchivedBus = async (busId) => {
+    requestDeleteConfirmation([busId]);
+  };
+
+  const handleUnarchiveBus = async (busId) => {
+    await unarchiveBusIds([busId]);
+  };
+
+  const handleBatchDeleteArchived = async () => {
+    requestDeleteConfirmation(selectedBusIds);
+  };
+
+  const handleBatchUnarchive = async () => {
+    await unarchiveBusIds(selectedBusIds);
   };
 
   const currentPageBusIds = currentItems.map((bus) => bus.id);
@@ -332,6 +468,11 @@ function Buses() {
   // Handle row click
   const handleRowClick = (bus) => {
     setSelectedBus(bus);
+    setEditingBus({
+      ...bus,
+      capacity: String(bus.capacity ?? ''),
+    });
+    setIsEditingDetails(false);
     setShowModal(true);
   };
 
@@ -339,6 +480,102 @@ function Buses() {
   const closeModal = () => {
     setShowModal(false);
     setSelectedBus(null);
+    setEditingBus(null);
+    setIsEditingDetails(false);
+  };
+
+  const handleEditDetailsInputChange = (event) => {
+    const { name, value } = event.target;
+
+    setEditingBus((previousBus) => ({
+      ...previousBus,
+      [name]: value,
+    }));
+  };
+
+  const applyUpdatedBusToCollections = (updatedBus) => {
+    setBuses((previousBuses) => {
+      const withoutUpdated = previousBuses.filter((bus) => bus.id !== updatedBus.id);
+      if (updatedBus.status === 'Offline') {
+        return withoutUpdated;
+      }
+
+      return [updatedBus, ...withoutUpdated];
+    });
+
+    setArchivedBuses((previousArchivedBuses) => {
+      const withoutUpdated = previousArchivedBuses.filter((bus) => bus.id !== updatedBus.id);
+      if (updatedBus.status === 'Offline') {
+        return [updatedBus, ...withoutUpdated];
+      }
+
+      return withoutUpdated;
+    });
+  };
+
+  const handleSaveBusDetails = async () => {
+    if (!editingBus) {
+      return;
+    }
+
+    if (!editingBus.busNumber || !editingBus.route || !editingBus.busCompany ||
+      !editingBus.plateNumber || !editingBus.capacity || !editingBus.busAttendant ||
+      !editingBus.busCompanyEmail || !editingBus.busCompanyContact ||
+      !editingBus.registeredDestination) {
+      alert('Please fill in all required fields before saving.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const payload = {
+        ...editingBus,
+        capacity: parseInt(editingBus.capacity, 10),
+      };
+
+      const updatedBusFromApi = await updateBus(selectedBus.id, payload);
+      const mergedUpdatedBus = {
+        ...updatedBusFromApi,
+        ...payload,
+        id: updatedBusFromApi?.id || selectedBus.id,
+        lastUpdated: updatedBusFromApi?.lastUpdated || Date.now(),
+      };
+
+      applyUpdatedBusToCollections(mergedUpdatedBus);
+      setSelectedBus(mergedUpdatedBus);
+      setEditingBus({
+        ...mergedUpdatedBus,
+        capacity: String(mergedUpdatedBus.capacity ?? ''),
+      });
+      setIsEditingDetails(false);
+
+      let firebaseSkipped = false;
+      try {
+        const syncResult = await syncBusToFirebase(mergedUpdatedBus);
+        if (syncResult?.reason === 'firebase-not-configured') {
+          firebaseSkipped = true;
+          setError('Saved to API, but Firebase sync is disabled. Add VITE_FIREBASE_* values in .env and restart the app.');
+          console.warn('Firebase is not configured (.env missing VITE_FIREBASE_*), skipping Firestore sync.');
+        }
+      } catch (firebaseError) {
+        console.error('Firebase sync failed after API update:', firebaseError);
+      }
+
+      setSuccessModal({
+        open: true,
+        title: 'Bus Updated',
+        message: 'Bus details were updated successfully.',
+        detail: firebaseSkipped ? 'Saved to API. Firebase sync is currently disabled.' : '',
+      });
+    } catch (err) {
+      const message = getRequestErrorMessage(err, 'Failed to update bus details.');
+      setError(message);
+      alert(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Open add bus modal
@@ -353,7 +590,7 @@ function Buses() {
       busNumber: '',
       route: '',
       busCompany: '',
-      status: 'Active',
+      status: 'Available',
       plateNumber: '',
       capacity: '',
       busAttendant: '',
@@ -365,14 +602,14 @@ function Buses() {
   };
 
   // Handle input change in add bus form
-=======
->>>>>>> dev-api
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewBus(prev => ({ ...prev, [name]: value }));
+    setNewBus(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
-<<<<<<< HEAD
   const handleBusPhotoUpload = (e) => {
     const file = e.target.files && e.target.files[0];
 
@@ -417,130 +654,167 @@ function Buses() {
       return;
     }
 
-    // API Integration - Uncomment when backend is ready
-    /*
     try {
       setLoading(true);
+      setError(null);
       const newBusData = {
         ...newBus,
         capacity: parseInt(newBus.capacity)
       };
-      const createdBus = await createBus(newBusData);
-      setBuses(prev => [createdBus, ...prev]); // Add to beginning (latest first)
+      const createdBusFromApi = await createBus(newBusData);
+      const mergedCreatedBus = {
+        ...createdBusFromApi,
+        ...newBusData,
+        id: createdBusFromApi?.id || createdBusFromApi?.busId || Date.now(),
+        lastUpdated: createdBusFromApi?.lastUpdated || Date.now(),
+      };
+
+      applyUpdatedBusToCollections(mergedCreatedBus);
       closeAddModal();
-      alert(`Bus ${newBus.busNumber} added successfully!`);
+
+      let firebaseSkipped = false;
+      try {
+        const syncResult = await syncBusToFirebase(mergedCreatedBus);
+        if (syncResult?.reason === 'firebase-not-configured') {
+          firebaseSkipped = true;
+          setError('Saved to API, but Firebase sync is disabled. Add VITE_FIREBASE_* values in .env and restart the app.');
+          console.warn('Firebase is not configured (.env missing VITE_FIREBASE_*), skipping Firestore sync.');
+        }
+      } catch (firebaseError) {
+        console.error('Firebase sync failed after create:', firebaseError);
+      }
+
+      setSuccessModal({
+        open: true,
+        title: 'Bus Added',
+        message: `Bus ${newBus.busNumber} was added successfully.`,
+        detail: firebaseSkipped ? 'Saved to API. Firebase sync is currently disabled.' : '',
+      });
     } catch (err) {
-      setError(err.message || 'Failed to add bus');
-      alert('Failed to add bus. Please try again.');
+      const message = getRequestErrorMessage(err, 'Failed to add bus. Please try again.');
+      setError(message);
+      alert(message);
       console.error('Error adding bus:', err);
     } finally {
       setLoading(false);
     }
-    */
-
-    // Local state update (current implementation)
-    // Remove this block when API is integrated
-    const newBusEntry = {
-=======
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    // Explicit conversion to Integers to avoid 422 errors
-    const submissionData = {
->>>>>>> dev-api
-      ...newBus,
-      capacity: parseInt(newBus.capacity, 10) || 0,
-      priority_seat: parseInt(newBus.priority_seat, 10) || 0,
-      company_email: newBus.company_email || null,
-      company_contact: newBus.company_contact || null
-    };
-<<<<<<< HEAD
-    setBuses(prev => [...prev, newBusEntry]);
-    closeAddModal();
-
-    // Show success message
-    alert(`Bus ${newBus.busNumber} added successfully!`);
   };
 
   // Get status color class
   const getStatusClass = (status) => {
     switch (status) {
       case 'Active': return 'status-completed';
+      case 'Available': return 'status-pending';
+      case 'In Transit': return 'status-in-progress';
+      case 'Arrived': return 'status-completed';
       case 'Maintenance': return 'status-in-progress';
       case 'Inactive': return 'status-pending';
-      case 'Archived': return 'status-archived';
+      case 'Offline': return 'status-archived';
       default: return '';
     }
   };
 
   const isArchivedView = viewMode === 'archived';
-=======
-
-    try {
-      await createBus(submissionData);
-      setShowAddModal(false);
-      await loadBuses(); // Refresh data immediately
-      
-      // Reset form
-      setNewBus({
-        bus_number: '', plate_number: '', capacity: '', priority_seat: '', 
-        status: 'Active', route_name: '', origin: '', registered_destination: '', 
-        operator: '', company_email: '', company_contact: '', 
-        bus_attendant: '', driver_name: '' 
-      });
-    } catch (err) {
-      console.error("Backend Error Detail:", err.response?.data);
-      alert(`Failed to save: ${JSON.stringify(err.response?.data?.detail || "Check console")}`);
-    }
-  };
-
-  const handleRowClick = (bus) => {
-    setSelectedBus(bus);
-    setShowViewModal(true);
-  };
-
-  // Matched status colors to your screenshot
-  const getStatusClass = (status) => {
-    const s = (status || '').toLowerCase();
-    if (s === 'active' || s === 'available') return 'status-completed'; // Green
-    if (s === 'maintenance') return 'status-pending'; // Orange
-    return 'status-in-progress';
-  };
-
-  const filteredBuses = (buses || []).filter(bus => 
-    (bus.bus_number || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (bus.plate_number || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (bus.route_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (bus.operator || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
->>>>>>> dev-api
 
   return (
     <main className="content">
+      <SuccessModal
+        open={successModal.open}
+        title={successModal.title}
+        message={successModal.message}
+        detail={successModal.detail}
+        onClose={() => setSuccessModal({ open: false, title: '', message: '', detail: '' })}
+      />
+
+      {archiveConfirmModal.open && (
+        <div className="modal-overlay confirmation-overlay" onClick={closeArchiveConfirmation}>
+          <div className="modal-content confirmation-content" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Confirm Archive</h2>
+              <button className="close-btn" onClick={closeArchiveConfirmation}>&times;</button>
+            </div>
+            <div className="modal-body">
+              <p>
+                {archiveConfirmModal.busIds.length > 1
+                  ? `Are you sure you want to archive ${archiveConfirmModal.busIds.length} buses and move them to Offline?`
+                  : 'Are you sure you want to archive this bus and move it to Offline?'}
+              </p>
+              <p className="info-note">You can restore archived buses later from the Offline tab.</p>
+              <div className="modal-actions-row">
+                <button
+                  type="button"
+                  className="table-action-btn delete"
+                  onClick={closeArchiveConfirmation}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="table-action-btn archive"
+                  onClick={confirmArchive}
+                >
+                  Confirm Archive
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirmModal.open && (
+        <div className="modal-overlay confirmation-overlay" onClick={closeDeleteConfirmation}>
+          <div className="modal-content confirmation-content" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Confirm Permanent Delete</h2>
+              <button className="close-btn" onClick={closeDeleteConfirmation}>&times;</button>
+            </div>
+            <div className="modal-body">
+              <p>
+                {deleteConfirmModal.busIds.length > 1
+                  ? `Delete ${deleteConfirmModal.busIds.length} archived buses permanently?`
+                  : 'Delete this archived bus permanently?'}
+              </p>
+              <p className="info-note">This action cannot be undone.</p>
+              <div className="modal-actions-row">
+                <button
+                  type="button"
+                  className="table-action-btn restore"
+                  onClick={closeDeleteConfirmation}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="table-action-btn delete"
+                  onClick={confirmDeleteArchived}
+                >
+                  Delete Permanently
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="requests-container">
         <div className="requests-header">
           <div className="header-content">
             <div>
               <h1>Buses</h1>
-              <p className="subtitle">Manage active buses, archive removals, and permanently delete archived entries</p>
+              <p className="subtitle">Manage active buses, move buses offline, and permanently delete offline entries</p>
             </div>
-<<<<<<< HEAD
-=======
-            <button className="add-bus-btn" onClick={() => setShowAddModal(true)}>+ Add New Bus</button>
->>>>>>> dev-api
           </div>
         </div>
 
-        {/* Search and Sort matched to UI */}
+        {/* Search and Sort Controls */}
         <div className="search-sort-controls">
-<<<<<<< HEAD
           <div className="search-sort-group">
 
             <div className="search-bar">
               <input
                 type="text"
                 placeholder={isArchivedView
-                  ? 'Search archived buses by number, route, company, plate, attendant, or status...'
+                  ? 'Search offline buses by number, route, company, plate, attendant, or status...'
                   : 'Search by bus number, route, company, plate, attendant, or status...'}
                 value={searchQuery}
                 onChange={handleSearchChange}
@@ -587,7 +861,7 @@ function Buses() {
                 className={`view-toggle-btn ${isArchivedView ? 'active' : ''}`}
                 onClick={() => handleViewModeChange('archived')}
               >
-                Archived ({archivedBuses.length})
+                Offline ({archivedBuses.length})
               </button>
             </div>
 
@@ -642,33 +916,9 @@ function Buses() {
               <col style={{ width: '12%' }} />
               <col style={{ width: '14%' }} />
               <col style={{ width: '8%' }} />
-              <col style={{ width: '14%' }} />
             </colgroup>
-=======
-          <div className="search-bar">
-            <input
-              type="text"
-              placeholder="Search by bus number, route, company, plate..."
-              className="search-input"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <div className="sort-controls">
-            <select className="sort-select">
-              <option>Last Updated</option>
-            </select>
-            <button className="sort-direction-btn">↓</button>
-          </div>
-        </div>
-
-        <div className="table-container">
-          <table className="requests-table">
->>>>>>> dev-api
             <thead>
-              {/* Header column order matched to target screenshot */}
               <tr>
-<<<<<<< HEAD
                 <th className="center-col">
                   <input
                     type="checkbox"
@@ -684,19 +934,18 @@ function Buses() {
                 <th className="center-col">Status</th>
                 <th>Plate Number</th>
                 <th className="center-col">Capacity</th>
-                <th className="center-col">Action</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <TableSkeletonRows rows={6} columns={8} />
+                <TableSkeletonRows rows={6} columns={7} />
               ) : currentItems.length === 0 ? (
                 <tr>
-                  <td colSpan="8" style={{ textAlign: 'center', padding: '2rem' }}>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '2rem' }}>
                     {searchQuery
                       ? 'No buses found matching your search.'
                       : isArchivedView
-                        ? 'No archived buses yet.'
+                        ? 'No offline buses yet.'
                         : 'No active buses yet.'}
                   </td>
                 </tr>
@@ -712,143 +961,132 @@ function Buses() {
                       />
                     </td>
                     <td className="bus-number">{bus.busNumber}</td>
-                    <td>{bus.route}</td>
+                    <td>{renderRouteWithChevron(bus.route)}</td>
                     <td>{bus.busCompany}</td>
-=======
-                <th>BUS NUMBER</th>
-                <th>ROUTE</th>
-                <th>BUS COMPANY</th>
-                <th className="center-col">STATUS</th>
-                <th>PLATE NUMBER</th>
-                <th className="center-col">CAPACITY</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? <TableSkeletonRows rows={10} columns={6} /> : 
-                filteredBuses.map((bus, index) => (
-                  <tr key={bus.id || index} className="clickable-row" onClick={() => handleRowClick(bus)}>
-                    <td className="bus-number-cell">{bus.bus_number}</td>
-                    <td>{bus.route_name || 'No Route'}</td>
-                    <td>{bus.operator || 'Independent'}</td>
->>>>>>> dev-api
                     <td className="center-col">
                       <span className={`status-badge ${getStatusClass(bus.status)}`}>
                         {bus.status}
                       </span>
                     </td>
-                    <td>{bus.plate_number}</td>
+                    <td>{bus.plateNumber}</td>
                     <td className="center-col">{bus.capacity}</td>
-                    <td className="center-col action-cell">
-                      {isArchivedView ? (
-                        <>
-                          <button
-                            type="button"
-                            className="table-action-btn restore"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleUnarchiveBus(bus.id);
-                            }}
-                          >
-                            Unarchive
-                          </button>
-                          <button
-                            type="button"
-                            className="table-action-btn delete"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleDeleteArchivedBus(bus.id);
-                            }}
-                          >
-                            Delete Permanently
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          className="table-action-btn archive"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleArchiveBus(bus.id);
-                          }}
-                        >
-                          Archive
-                        </button>
-                      )}
-                    </td>
                   </tr>
                 ))
-              }
+              )}
             </tbody>
           </table>
+        </div>
 
-          {/* Pagination Footer matched to UI */}
-          <div className="table-footer">
-            <p>Showing 1 to {filteredBuses.length} of {buses.length} buses</p>
-            <div className="pagination">
-              <button className="page-btn">Previous</button>
-              <button className="page-btn active">1</button>
-              <button className="page-btn">2</button>
-              <button className="page-btn">Next</button>
+        {sortedBuses.length > 0 && (
+          <div className="pagination">
+            <button
+              onClick={() => paginate(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="pagination-btn"
+            >
+              Previous
+            </button>
+
+            <div className="page-numbers">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
+                <button
+                  key={number}
+                  onClick={() => paginate(number)}
+                  className={`page-number ${currentPage === number ? 'active' : ''}`}
+                >
+                  {number}
+                </button>
+              ))}
             </div>
+
+            <button
+              onClick={() => paginate(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="pagination-btn"
+            >
+              Next
+            </button>
           </div>
-<<<<<<< HEAD
         )}
 
         {sortedBuses.length > 0 && (
           <div className="table-info">
-            Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, sortedBuses.length)} of {sortedBuses.length} {isArchivedView ? 'archived' : 'active'} buses
+            Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, sortedBuses.length)} of {sortedBuses.length} {isArchivedView ? 'offline' : 'active'} buses
             {searchQuery && ` (filtered from ${sourceBuses.length} total)`}
           </div>
         )}
-=======
-        </div>
->>>>>>> dev-api
       </div>
 
+      {/* Add Bus Modal */}
       {showAddModal && (
-        <div className="modal-overlay">
-          <div className="modal-content add-bus-modal">
+        <div className="modal-overlay" onClick={closeAddModal}>
+          <div className="modal-content add-bus-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Add New Bus</h2>
-              <button className="close-btn" onClick={() => setShowAddModal(false)}>&times;</button>
+              <button className="close-btn" onClick={closeAddModal}>&times;</button>
             </div>
-<<<<<<< HEAD
 
             <form onSubmit={handleSubmit} className="modal-body">
               <div className="form-grid">
                 <div className="form-section">
                   <h3>Bus Information</h3>
 
-=======
-            <div className="modal-body scrollable-modal">
-              <form onSubmit={handleSubmit}>
-                <section className="form-section">
-                  <h3 className="section-title">Bus Information</h3>
->>>>>>> dev-api
                   <div className="form-group">
-                    <label>Bus Number *</label>
-                    <input name="bus_number" value={newBus.bus_number} onChange={handleInputChange} required placeholder="e.g., OA-116" />
+                    <label htmlFor="busNumber">Bus Number *</label>
+                    <input
+                      type="text"
+                      id="busNumber"
+                      name="busNumber"
+                      value={newBus.busNumber}
+                      onChange={handleInputChange}
+                      placeholder="e.g., OA-116"
+                      required
+                    />
                   </div>
+
                   <div className="form-group">
-                    <label>Plate Number *</label>
-                    <input name="plate_number" value={newBus.plate_number} onChange={handleInputChange} required placeholder="e.g., ABC-123" />
+                    <label htmlFor="plateNumber">Plate Number *</label>
+                    <input
+                      type="text"
+                      id="plateNumber"
+                      name="plateNumber"
+                      value={newBus.plateNumber}
+                      onChange={handleInputChange}
+                      placeholder="e.g., ABC-123"
+                      required
+                    />
                   </div>
+
                   <div className="form-group">
-                    <label>Capacity *</label>
-                    <input type="number" name="capacity" value={newBus.capacity} onChange={handleInputChange} required placeholder="45" />
+                    <label htmlFor="capacity">Capacity *</label>
+                    <input
+                      type="number"
+                      id="capacity"
+                      name="capacity"
+                      value={newBus.capacity}
+                      onChange={handleInputChange}
+                      placeholder="e.g., 45"
+                      min="1"
+                      required
+                    />
                   </div>
+
                   <div className="form-group">
-                    <label>Priority Seats *</label>
-                    <input type="number" name="priority_seat" value={newBus.priority_seat} onChange={handleInputChange} required placeholder="10" />
-                  </div>
-                  <div className="form-group">
-                    <label>Status *</label>
-                    <select name="status" value={newBus.status} onChange={handleInputChange}>
+                    <label htmlFor="status">Status *</label>
+                    <select
+                      id="status"
+                      name="status"
+                      value={newBus.status}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="Available">Available</option>
                       <option value="Active">Active</option>
-                      <option value="Maintenance">Maintenance</option>
+                      <option value="In Transit">In Transit</option>
+                      <option value="Arrived">Arrived</option>
+                      <option value="Offline">Offline</option>
                     </select>
                   </div>
-<<<<<<< HEAD
 
                   <div className="form-group">
                     <label htmlFor="busPhoto">Upload Bus Photo</label>
@@ -877,55 +1115,75 @@ function Buses() {
                 <div className="form-section">
                   <h3>Route Information</h3>
 
-=======
-                </section>
+                  <div className="form-group">
+                    <label htmlFor="route">Origin *</label>
+                    <input
+                      type="text"
+                      id="route"
+                      name="route"
+                      value={newBus.route}
+                      onChange={handleInputChange}
+                      placeholder="e.g., One Ayala"
+                      required
+                    />
+                  </div>
 
-                <section className="form-section">
-                  <h3 className="section-title">Route Information</h3>
->>>>>>> dev-api
                   <div className="form-group">
-                    <label>Origin *</label>
-                    <input name="origin" value={newBus.origin} onChange={handleInputChange} required placeholder="e.g., Makati" />
+                    <label htmlFor="registeredDestination">Registered Destination *</label>
+                    <input
+                      type="text"
+                      id="registeredDestination"
+                      name="registeredDestination"
+                      value={newBus.registeredDestination}
+                      onChange={handleInputChange}
+                      placeholder="e.g., Bonifacio Global City, Taguig"
+                      required
+                    />
                   </div>
-                  <div className="form-group">
-                    <label>Route *</label>
-                    <input name="route_name" value={newBus.route_name} onChange={handleInputChange} required placeholder="e.g., One Ayala - BGC" />
-                  </div>
-<<<<<<< HEAD
                 </div>
 
                 <div className="form-section">
                   <h3>Bus Company</h3>
 
-=======
->>>>>>> dev-api
                   <div className="form-group">
-                    <label>Registered Destination *</label>
-                    <input name="registered_destination" value={newBus.registered_destination} onChange={handleInputChange} required placeholder="e.g., Pasig City" />
+                    <label htmlFor="busCompany">Company Name *</label>
+                    <input
+                      type="text"
+                      id="busCompany"
+                      name="busCompany"
+                      value={newBus.busCompany}
+                      onChange={handleInputChange}
+                      placeholder="e.g., JAM Transit"
+                      required
+                    />
                   </div>
-                </section>
 
-                <section className="form-section">
-                  <h3 className="section-title">Bus Company</h3>
                   <div className="form-group">
-                    <label>Company Name *</label>
-                    <input name="operator" value={newBus.operator} onChange={handleInputChange} required placeholder="e.g., JAM Transit" />
+                    <label htmlFor="busCompanyEmail">Company Email *</label>
+                    <input
+                      type="email"
+                      id="busCompanyEmail"
+                      name="busCompanyEmail"
+                      value={newBus.busCompanyEmail}
+                      onChange={handleInputChange}
+                      placeholder="e.g., operations@company.com.ph"
+                      required
+                    />
                   </div>
-                </section>
 
-                <section className="form-section attendant-section">
-                  <h3 className="section-title">Bus Attendant (Source of Truth)</h3>
                   <div className="form-group">
-                    <label>Assigned Bus Attendant *</label>
-                    <input name="bus_attendant" value={newBus.bus_attendant} onChange={handleInputChange} required placeholder="e.g., Juan Dela Cruz" />
+                    <label htmlFor="busCompanyContact">Company Contact *</label>
+                    <input
+                      type="tel"
+                      id="busCompanyContact"
+                      name="busCompanyContact"
+                      value={newBus.busCompanyContact}
+                      onChange={handleInputChange}
+                      placeholder="e.g., +63 917 123 4567"
+                      required
+                    />
                   </div>
-                </section>
-
-                <div className="form-actions">
-                  <button type="button" className="btn-cancel" onClick={() => setShowAddModal(false)}>Cancel</button>
-                  <button type="submit" className="btn-submit">Save Bus</button>
                 </div>
-<<<<<<< HEAD
 
                 <div className="form-section highlight-section">
                   <h3>Bus Attendant (Source of Truth)</h3>
@@ -990,21 +1248,43 @@ function Buses() {
                   <h3>Bus Information</h3>
                   <div className="info-row">
                     <span className="info-label">Bus Number:</span>
-                    <span className="info-value">{selectedBus.busNumber}</span>
+                    {isEditingDetails ? (
+                      <input className="inline-edit-input" name="busNumber" value={editingBus?.busNumber || ''} onChange={handleEditDetailsInputChange} />
+                    ) : (
+                      <span className="info-value">{selectedBus.busNumber}</span>
+                    )}
                   </div>
                   <div className="info-row">
                     <span className="info-label">Plate Number:</span>
-                    <span className="info-value">{selectedBus.plateNumber}</span>
+                    {isEditingDetails ? (
+                      <input className="inline-edit-input" name="plateNumber" value={editingBus?.plateNumber || ''} onChange={handleEditDetailsInputChange} />
+                    ) : (
+                      <span className="info-value">{selectedBus.plateNumber}</span>
+                    )}
                   </div>
                   <div className="info-row">
                     <span className="info-label">Capacity:</span>
-                    <span className="info-value">{selectedBus.capacity} passengers</span>
+                    {isEditingDetails ? (
+                      <input className="inline-edit-input" type="number" min="1" name="capacity" value={editingBus?.capacity || ''} onChange={handleEditDetailsInputChange} />
+                    ) : (
+                      <span className="info-value">{selectedBus.capacity} passengers</span>
+                    )}
                   </div>
                   <div className="info-row">
                     <span className="info-label">Status:</span>
-                    <span className={`status-badge ${getStatusClass(selectedBus.status)}`}>
-                      {selectedBus.status}
-                    </span>
+                    {isEditingDetails ? (
+                      <select className="inline-edit-input" name="status" value={editingBus?.status || 'Available'} onChange={handleEditDetailsInputChange}>
+                        <option value="Available">Available</option>
+                        <option value="Active">Active</option>
+                        <option value="In Transit">In Transit</option>
+                        <option value="Arrived">Arrived</option>
+                        <option value="Offline">Offline</option>
+                      </select>
+                    ) : (
+                      <span className={`status-badge ${getStatusClass(selectedBus.status)}`}>
+                        {selectedBus.status}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -1012,11 +1292,19 @@ function Buses() {
                   <h3>Route Information</h3>
                   <div className="info-row">
                     <span className="info-label">Current Route:</span>
-                    <span className="info-value">{selectedBus.route}</span>
+                    {isEditingDetails ? (
+                      <input className="inline-edit-input" name="route" value={editingBus?.route || ''} onChange={handleEditDetailsInputChange} />
+                    ) : (
+                      <span className="info-value">{renderRouteWithChevron(selectedBus.route)}</span>
+                    )}
                   </div>
                   <div className="info-row">
                     <span className="info-label">Registered Destination:</span>
-                    <span className="info-value">{selectedBus.registeredDestination}</span>
+                    {isEditingDetails ? (
+                      <input className="inline-edit-input" name="registeredDestination" value={editingBus?.registeredDestination || ''} onChange={handleEditDetailsInputChange} />
+                    ) : (
+                      <span className="info-value">{selectedBus.registeredDestination}</span>
+                    )}
                   </div>
                 </div>
 
@@ -1024,19 +1312,31 @@ function Buses() {
                   <h3>Bus Company</h3>
                   <div className="info-row">
                     <span className="info-label">Company Name:</span>
-                    <span className="info-value">{selectedBus.busCompany}</span>
+                    {isEditingDetails ? (
+                      <input className="inline-edit-input" name="busCompany" value={editingBus?.busCompany || ''} onChange={handleEditDetailsInputChange} />
+                    ) : (
+                      <span className="info-value">{selectedBus.busCompany}</span>
+                    )}
                   </div>
                   <div className="info-row">
                     <span className="info-label">Email:</span>
-                    <span className="info-value">
-                      <a href={`mailto:${selectedBus.busCompanyEmail}`}>{selectedBus.busCompanyEmail}</a>
-                    </span>
+                    {isEditingDetails ? (
+                      <input className="inline-edit-input" type="email" name="busCompanyEmail" value={editingBus?.busCompanyEmail || ''} onChange={handleEditDetailsInputChange} />
+                    ) : (
+                      <span className="info-value">
+                        <a href={`mailto:${selectedBus.busCompanyEmail}`}>{selectedBus.busCompanyEmail}</a>
+                      </span>
+                    )}
                   </div>
                   <div className="info-row">
                     <span className="info-label">Contact Number:</span>
-                    <span className="info-value">
-                      <a href={`tel:${selectedBus.busCompanyContact}`}>{selectedBus.busCompanyContact}</a>
-                    </span>
+                    {isEditingDetails ? (
+                      <input className="inline-edit-input" name="busCompanyContact" value={editingBus?.busCompanyContact || ''} onChange={handleEditDetailsInputChange} />
+                    ) : (
+                      <span className="info-value">
+                        <a href={`tel:${selectedBus.busCompanyContact}`}>{selectedBus.busCompanyContact}</a>
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -1044,7 +1344,11 @@ function Buses() {
                   <h3>Bus Attendant (Source of Truth)</h3>
                   <div className="info-row">
                     <span className="info-label">Assigned Attendant:</span>
-                    <span className="info-value attendant-name">{selectedBus.busAttendant}</span>
+                    {isEditingDetails ? (
+                      <input className="inline-edit-input" name="busAttendant" value={editingBus?.busAttendant || ''} onChange={handleEditDetailsInputChange} />
+                    ) : (
+                      <span className="info-value attendant-name">{selectedBus.busAttendant}</span>
+                    )}
                   </div>
                   <p className="info-note">
                     * The bus attendant is the primary source of truth for all bus information and operations.
@@ -1053,7 +1357,36 @@ function Buses() {
               </div>
 
               <div className="modal-actions-row">
-                {selectedBus.status === 'Archived' ? (
+                {isEditingDetails ? (
+                  <>
+                    <button type="button" className="table-action-btn restore" onClick={handleSaveBusDetails}>
+                      Save Changes
+                    </button>
+                    <button
+                      type="button"
+                      className="table-action-btn delete"
+                      onClick={() => {
+                        setIsEditingDetails(false);
+                        setEditingBus({
+                          ...selectedBus,
+                          capacity: String(selectedBus.capacity ?? ''),
+                        });
+                      }}
+                    >
+                      Cancel Edit
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="table-action-btn restore primary-cta-btn"
+                    onClick={() => setIsEditingDetails(true)}
+                  >
+                    Edit Details
+                  </button>
+                )}
+
+                {selectedBus.status === 'Offline' ? (
                   <>
                     <button
                       type="button"
@@ -1080,9 +1413,6 @@ function Buses() {
                   </button>
                 )}
               </div>
-=======
-              </form>
->>>>>>> dev-api
             </div>
           </div>
         </div>

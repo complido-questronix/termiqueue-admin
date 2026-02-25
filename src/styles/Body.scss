@@ -70,6 +70,71 @@
   gap: 1.5rem;
 }
 
+.dashboard-warning-banner {
+  border: 1px solid color.adjust($secondary-color, $lightness: 12%);
+  background: color.adjust($secondary-color, $lightness: 38%);
+  color: $black;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.kpi-card-skeleton {
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  justify-content: center;
+}
+
+.dashboard-panel-skeleton {
+  min-height: 370px;
+}
+
+.skeleton-block {
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    color.adjust($faded-alt, $lightness: 34%) 0%,
+    color.adjust($faded-alt, $lightness: 42%) 50%,
+    color.adjust($faded-alt, $lightness: 34%) 100%
+  );
+  background-size: 220% 100%;
+  animation: dashboardSkeletonPulse 1.2s ease-in-out infinite;
+}
+
+.skeleton-kpi-label {
+  width: 45%;
+  height: 16px;
+}
+
+.skeleton-kpi-value {
+  width: 30%;
+  height: 36px;
+}
+
+.skeleton-panel-title {
+  width: 48%;
+  height: 18px;
+  margin-bottom: 1rem;
+}
+
+.skeleton-chart {
+  width: 100%;
+  height: 290px;
+}
+
+@keyframes dashboardSkeletonPulse {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
+}
+
 .dashboard-toolbar {
   display: flex;
   justify-content: space-between;
