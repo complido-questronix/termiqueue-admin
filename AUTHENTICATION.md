@@ -30,6 +30,7 @@ src/
 Create `.env` from `.env.example` and set:
 
 ```env
+VITE_AUTH_PROVIDER=firebase
 VITE_FIREBASE_API_KEY=...
 VITE_FIREBASE_AUTH_DOMAIN=...
 VITE_FIREBASE_PROJECT_ID=...
@@ -38,7 +39,15 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=...
 VITE_FIREBASE_APP_ID=...
 ```
 
-`VITE_API_URL` remains optional for non-auth API calls.
+`VITE_API_URL` is only required when using API auth mode (`VITE_AUTH_PROVIDER=api`).
+
+### Auth Mode Selection
+
+- `VITE_AUTH_PROVIDER=firebase` (default):
+  - Uses Firebase Auth + Firestore admin check.
+- `VITE_AUTH_PROVIDER=api`:
+  - Uses `loginAPI`/`logoutAPI`/`getCurrentUser` from `src/services/api.js`.
+  - Requires a reachable backend at `VITE_API_URL`.
 
 ## Firebase Project Setup
 
@@ -103,6 +112,7 @@ function MyComponent() {
 ### "Login failed"
 
 - Verify email/password user exists in Firebase Auth.
+- Verify `VITE_AUTH_PROVIDER=firebase` if you are not using backend API auth.
 
 ### "Access Denied: You are not an Admin"
 
@@ -112,6 +122,18 @@ function MyComponent() {
 ### App logs in then immediately logs out
 
 - Usually means missing or invalid admin document in Firestore.
+
+### Login works only after changing port
+
+- This is usually not a port issue itself.
+- Most common cause is running the wrong auth mode:
+  - `VITE_AUTH_PROVIDER=api` without a working API backend.
+- Confirm your `.env` has:
+
+```env
+VITE_AUTH_PROVIDER=firebase
+VITE_API_URL=
+```
 
 ### Firebase config/runtime error
 

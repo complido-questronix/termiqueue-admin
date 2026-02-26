@@ -42,6 +42,7 @@ Copy-Item .env.example .env
 
 Required values in `.env`:
 
+- `VITE_AUTH_PROVIDER` (`firebase` by default)
 - `VITE_FIREBASE_API_KEY`
 - `VITE_FIREBASE_AUTH_DOMAIN`
 - `VITE_FIREBASE_PROJECT_ID`
@@ -49,7 +50,8 @@ Required values in `.env`:
 - `VITE_FIREBASE_MESSAGING_SENDER_ID`
 - `VITE_FIREBASE_APP_ID`
 
-> `VITE_API_URL` is optional unless you are using additional backend API endpoints.
+> `VITE_API_URL` is optional and only used when `VITE_AUTH_PROVIDER=api`.
+> For most developers pulling this repo, keep `VITE_AUTH_PROVIDER=firebase`.
 
 ### Demo Data Files (JSON)
 
@@ -81,7 +83,7 @@ npm run start
 ```
 
 This command runs both the SCSS watcher and Vite dev server concurrently. The application will be available at:
-- **Local**: http://localhost:5173
+- **Local**: check the exact `Local:` URL shown in terminal (`5173`, `5174`, `5175`, etc.)
 
 The page will automatically reload when you make changes.
 
@@ -103,6 +105,13 @@ To sign in successfully, your Firebase project must have:
 3. A document for each admin user where:
    - document ID = Firebase Auth user UID
    - field `isAdmin` = `true`
+
+### Auth Mode Notes (important)
+
+- Default repo login path is **Firebase**.
+- Keep this in `.env`:
+   - `VITE_AUTH_PROVIDER=firebase`
+- Only set `VITE_AUTH_PROVIDER=api` if your backend auth endpoints are running and `VITE_API_URL` is set correctly.
 
 📖 See **[AUTHENTICATION.md](AUTHENTICATION.md)** for full Firebase setup and troubleshooting.
 
@@ -224,6 +233,16 @@ Verify `.env` exists and all `VITE_FIREBASE_*` values are set correctly for your
 
 ### Access denied after login
 Check Firestore `users/{uid}` and ensure `isAdmin` is set to `true` for your authenticated user.
+
+### Login fails for new pullers
+Verify `.env` is using Firebase mode:
+
+```env
+VITE_AUTH_PROVIDER=firebase
+VITE_API_URL=
+```
+
+Using `VITE_AUTH_PROVIDER=api` without a live backend auth server will block login.
 
 ## Contributing
 

@@ -12,8 +12,9 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Detect whether a real API backend is configured via env var
-  const apiConfigured = !!import.meta.env.VITE_API_URL;
+  // Auth mode is explicit to avoid accidental API auth for fresh clones.
+  const AUTH_PROVIDER = (import.meta.env.VITE_AUTH_PROVIDER || 'firebase').toLowerCase();
+  const apiConfigured = AUTH_PROVIDER === 'api' && !!import.meta.env.VITE_API_URL;
 
   // 2. Firebase "Watcher" - This checks if you are logged in automatically
   useEffect(() => {
