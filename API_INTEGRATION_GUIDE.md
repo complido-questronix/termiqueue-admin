@@ -40,10 +40,15 @@ For local testing before backend integration, edit JSON demo files listed in REA
 #### 1. Environment Setup
 Create `.env` file in project root:
 ```env
+VITE_AUTH_PROVIDER=api
 VITE_API_URL=http://localhost:3000/api
 # or your production URL:
 # VITE_API_URL=https://your-api.com/api
 ```
+
+Important:
+- If `VITE_AUTH_PROVIDER=firebase`, login uses Firebase (default repo behavior).
+- If `VITE_AUTH_PROVIDER=api`, login uses backend API endpoints in `src/services/api.js`.
 
 #### 2. Backend API Requirements
 Your backend should provide these endpoints:
